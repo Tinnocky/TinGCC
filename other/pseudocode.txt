@@ -1,0 +1,10 @@
+1. Lexing
+take the text and parse it into a list of tokens.
+
+keep it in a list: internal name of the token, the characters that make it up (the string) and where is it in the code (line i guess)
+
+2. Parsing
+get the list of all tokens and go 1 by 1 to check if the grammer is correct and the code will actually produce something. output errors here
+
+3. code generation
+output it to C code

@@ -1,0 +1,51 @@
+| This is a comment! |
+
+create x as int,
+create y as float,
+create chr as char = "Hi",
+create str as string = 'String',
+|can declare characters or strings both as " " and as ' '|
+
+
+int get_power with [num as int = -1] start: |assign as -1 if not gotten value|
+    if (num is -1) start:
+        return num,
+    end
+    if (num less than 0) start:
+        return num,
+    end
+    else start:
+        return num * num,
+    end
+end
+
+
+int main with [] start:
+    say chr,
+
+    x = input int,
+    while (x is not 5) start:
+    x++,
+    end
+
+    y = input float,
+
+    repeat (i as int = 0, i less than x, i += y) start:
+        say "i is: " 0,
+
+        if (i % 2 is 0) start:
+            continue,
+        end
+        if (i % 9 is 0) start:
+            stop
+        end
+    end
+
+    create abcs as int list = [1, 2, 3, -1],
+    repeat on (thing in abcs) start:
+        say get_power(thing),
+    end
+end
+
+| lets say we create a string without any set info |
+create 
