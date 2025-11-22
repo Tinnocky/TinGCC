@@ -12,7 +12,7 @@ typedef enum {
     ELSE = 5,            /* else statement */
     WHILE = 6,           /* while loop */
     REPEAT = 7,          /* for */
-    REPEAT_ON = 8,       /* for each, must appear after repeat token */
+    ON = 8,              /* for each, must appear after repeat token */
     STOP = 9,            /* break */
     SKIP = 10,           /* continue */
     SAY = 11,            /* print */
@@ -31,51 +31,50 @@ typedef enum {
 
     /* --- BOOLEAN OPERATORS --- */
     IS = 22,             /* == */
-    IS_NOT = 23,         /* != */
-    MORE_THAN = 24,      /* x > */
-    NOT_MORE_THAN = 25,  /* x <= */
-    LESS_THAN = 26,      /* x < */
-    NOT_LESS_THAN = 27,  /* x >= */
-    AND = 28,            /* && */
-    OR = 29,             /* || */
+    NOT = 23,            /* != */
+    MORE = 24,           /* x > */
+    LESS = 25,           /* x < */
+    THAN = 26,
+    AND = 27,            /* && */
+    OR = 28,             /* || */
 
     /* --- ARITHMETIC OPERATORS --- */
-    PLUS = 30,           /* + */
-    MINUS = 31,          /* - */
-    MULT = 32,           /* * */
-    DIVIDE = 33,         /* / */
-    MODULO = 34,         /* % */
-    INCREMENT = 35,      /* ++ */
-    DECREMENT = 36,      /* -- */
-    ADD_TO = 37,         /* += */
-    SUB_TO = 38,         /* -= */
-    MULT_TO = 39,        /* *= */
-    DIVIDE_TO = 40,      /* /= */
-    MOD_TO = 41,         /* %= */
+    PLUS = 29,           /* + */
+    MINUS = 30,          /* - */
+    MULT = 31,           /* * */
+    DIVIDE = 32,         /* / */
+    MODULO = 33,         /* % */
+    INCREMENT = 34,      /* ++ */
+    DECREMENT = 35,      /* -- */
+    ADD_TO = 36,         /* += */
+    SUB_TO = 37,         /* -= */
+    MULT_TO = 38,        /* *= */
+    DIVIDE_TO = 39,      /* /= */
+    MOD_TO = 40,         /* %= */
 
     /* --- ASSIGNMENT --- */
-    ASSIGN = 42,         /* = */
+    ASSIGN = 41,         /* = */
 
     /* --- PUNCTUATION / DELIMITERS --- */
-    OPEN_PAREN = 43,     /* (  — function calls, ifs, whiles, etc. */
-    CLOSE_PAREN = 44,    /* ) */
-    OPEN_BRACKET = 45,   /* [  — function params, list init, etc. */
-    CLOSE_BRACKET = 46,  /* ] */
-    END_OF_LINE = 47,    /* ;  — end of statement */
-    COLON = 48,          /* :  — various uses */
+    OPEN_PAREN = 42,     /* (  — function calls, ifs, whiles, etc. */
+    CLOSE_PAREN = 43,    /* ) */
+    OPEN_BRACKET = 44,   /* [  — function params, list init, etc. */
+    CLOSE_BRACKET = 45,  /* ] */
+    END_OF_LINE = 46,    /* ;  — end of statement */
+    COLON = 47,          /* :  — various uses */
 
     /* --- LITERALS --- */
-    INTEGER_LITERAL = 49, /* integer constant */
-    FLOAT_LITERAL = 50,   /* floating-point constant */
-    CHAR_LITERAL = 51,    /* character constant */
-    STRING_LITERAL = 52,  /* string constant */
-    BOOLEAN_LITERAL = 53, /* boolean constant */
+    INTEGER_LITERAL = 48, /* integer constant */
+    FLOAT_LITERAL = 49,   /* floating-point constant */
+    CHAR_LITERAL = 50,    /* character constant */
+    STRING_LITERAL = 51,  /* string constant */
+    BOOLEAN_LITERAL = 52, /* boolean constant */
 
     /* --- IDENTIFIERS --- */
-    IDENTIFIER = 54,      /* variable/function name */
+    IDENTIFIER = 53,      /* variable/function name */
 
     /* --- SPECIAL --- */
-    EOF_TOKEN = 55,        /* end of file */
+    EOF_TOKEN = 54,        /* end of file */
     UNKNOWN = -1,
     NOT_FOUND = -2
 } TokenType;
@@ -86,7 +85,6 @@ typedef struct {
     TokenType type;
 } Keyword;
 
-
 // array ends with a null so we know when it ends.
 extern Keyword keywords[];
 /* 
@@ -94,11 +92,11 @@ Keyword keywords[] = {
     {"create", CREATE}, {"as", AS}, {"start", START_SCOPE}, {"end", END_SCOPE},
     {"if", IF}, {"else", ELSE}, {"while", WHILE}, {"stop", STOP}, {"skip", SKIP}, 
     {"say", SAY}, {"input", INPUT}, {"with", WITH}, {"return", RETURN}, 
-    {"true", TRUE}, {"false", FALSE},
+    {"true", TRUE}, {"false", FALSE}, {"repeat", REPEAT}, {"on", ON},
 
     {"int", INT}, {"float", FLOAT}, {"char", CHAR}, {"list", LIST}, {"string", STRING},
 
-    {"and", AND}, {"or", OR},
+    {"is", IS}, {"not", NOT}, {"more", MORE}, {"less", LESS}, {"and", AND}, {"or", OR},
 
     {"=", ASSIGN}, {"+", PLUS}, {"-", MINUS}, {"*", MULT}, {"/", DIVIDE},
     {"%%", MODULO}, {"++", INCREMENT}, {"--", DECREMENT},
