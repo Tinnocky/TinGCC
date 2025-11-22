@@ -63,6 +63,14 @@ void free_ast(ASTNode *ast){
 }
 
 
+void realloc_check(char **token_string, int *token_length, int *token_size){
+    if (*token_length == *token_size){
+        *token_size *= 2;
+        *token_string = realloc(token_string, *token_size);
+        check_nullptr(token_string, "Lexer - Realloc for a token string failed\n");
+    }
+}
+
 ASTNode *run_lexer(Lexer *lexer){
     // create AST
     ASTNode *ast = malloc(sizeof(ASTNode));
@@ -88,15 +96,21 @@ ASTNode *run_lexer(Lexer *lexer){
         free(current_token);
 
         // malloc next node in the AST
-        if (lexer->current_char != EOF){
-            ASTNode *next = malloc(sizeof(ASTNode));
-            check_nullptr(next, "Lexer - malloc for ASTNode failed. \n");
-            ast->next = next;
-            next->next = NULL;
+        ASTNode *next = malloc(sizeof(ASTNode));
+        check_nullptr(next, "Lexer - malloc for ASTNode failed. \n");
+        ast->next = next;
+        next->next = NULL;
     
-            ast = next;
-        }
+        ast = next;
     }
+
+    // add an EOF token to the end of the AST
+    Token *eof_token = malloc(sizeof(Token));
+    check_nullptr(eof_token, "Lexer - malloc for EOF token failed. \n");
+    eof_token->type = EOF_TOKEN;
+    eof_token->line = lexer->line;
+    eof_token->string = "";
+    eof_token->length = 0;
 
     return ast_head;
 }
@@ -204,8 +218,10 @@ Token *get_token(Lexer *lexer, const char *token_string, int token_length, bool 
 }
 
 
-char *get_token_string(Lexer *lexer, int *token_length, int *token_size, bool *is_string){
+char *get_token_string(Lexer *lexer, int *token_length, int *token_size, bool *is_string){    
     /* get the next token in the file, as a string. */
+    skip_unnecessary(lexer); // skip whitespaces and comments
+
     // check for a string or character literal
 
     // check for multi character keywords
@@ -221,22 +237,172 @@ char *get_token_string(Lexer *lexer, int *token_length, int *token_size, bool *i
 void skip_unnecessary(Lexer *lexer){
     /* skips unnecessary stuff such as comments or whitspaces.
         advances lines. */
+
+    // there may be whitespaces or more comments after comments.
+    bool finished = false;
+    while (!finished){
+        // whitespaces
+        while (lexer->current_char == '\n' || lexer->current_char == '\t' || lexer->current_char == ' '){
+            if (lexer->current_char == '\n'){
+                lexer->line++;
+            }
+            
+            advance(lexer);
+        }
+    
+        // comments
+        if (lexer->current_char == '|'){
+            advance(lexer); // skip starting | symbol
+    
+            while (lexer->current_char != '|'){
+                if (lexer->current_char == '\n'){
+                    lexer->line++;
+                }
+                else if (lexer->current_char == EOF){
+                    print_error("Lexer - comment left unterminated.");
+                }
+    
+                advance(lexer);
+            }
+
+            advance(lexer); // skip ending | symbol
+            continue; // go to start of loop to check if there are whitespaces or commentgs
+        }
+        
+        finished = true; // if it got to here means it didnt enter the comments scope.
+    }
 }
 
 
 bool read_string_literal(Lexer *lexer, char *token_string, int *token_length, int *token_size){
     /* reads the next token if its in between quotes into *token_string.
         returns bool for if its a string or not. */
+        if (lexer->current_char != '\'' && lexer->current_char != '\"'){
+            return false;
+        }
+
+        char quote_type = lexer->current_char;
+        advance(lexer); // skip starting qoute
+
+        while (lexer->current_char != quote_type){
+            if (lexer->current_char == '\n'){
+                lexer->line++;
+            }
+            else if (lexer->current_char == EOF){
+                print_error("Lexer - string left unterminated.");
+                return false;
+            }
+
+            token_string[(*token_length)++] = lexer->current_char;
+
+            realloc_check(token_string, token_length, token_size);
+
+            advance(lexer);
+        }
+
+        advance(lexer); // skip ending quote
+        token_string[*token_length] = '\0';
+        
+        return true;
 }
 
 
 bool read_operator(Lexer *lexer, char *token_string, int *token_length, int *token_size){
     /* reads the next token operator into *token_string.
         returns bool for if its an operator or not. */
+
+    // one-char operators
+    if (lexer->current_char == '(' || lexer->current_char == ')' ||
+        lexer->current_char == '[' || lexer->current_char == ']' ||
+        lexer->current_char == ':' || lexer->current_char == ',' ||
+        lexer->current_char == '='){
+            token_string[(*token_length)++] = lexer->current_char;
+            advance(lexer);
+            return true;
+        }
+
+    // arithmetic
+    if (lexer->current_char == '+'){ // starts with plus
+        token_string[(*token_length)++] = lexer->current_char;
+
+        advance(lexer);
+        if (lexer->current_char == '=' || lexer->current_char == '+'){
+            token_string[(*token_length)++] = lexer->current_char;
+            advance(lexer);
+            return true;
+        }
+        else {
+            go_back(lexer);
+        }
+        return true;
+    }
+    if (lexer->current_char == '-'){ // starts with minus
+        token_string[(*token_length)++] = lexer->current_char;
+
+        advance(lexer);
+        if (lexer->current_char == '=' || lexer->current_char == '-'){
+            token_string[(*token_length)++] = lexer->current_char;
+            advance(lexer);
+            return true;
+        }
+        else {
+            go_back(lexer);
+        }
+        return true;
+    }
+    if (lexer->current_char == '*' || lexer->current_char == '/' || lexer->current_char == '%'){ // starts with either mult, divide or modulo
+        token_string[(*token_length)++] = lexer->current_char;
+
+        advance(lexer);
+        if (lexer->current_char == '='){
+            token_string[(*token_length)++] = lexer->current_char;
+            advance(lexer);
+            return true;
+        }
+        else {
+            go_back(lexer);
+        }
+        return true;
+    }
+
+    return false; // none of the above
 }
 
 
 bool read_word(Lexer *lexer, char *token_string, int *token_length, int *token_size){
     /* reads the next token into *token_string until a whitespace or delimiter is hit.
         could be numbers, words, etc */
+    if (isalpha(lexer->current_char) || lexer->current_char == '_'){
+        while (isalpha(lexer->current_char) || lexer->current_char == '_' || isdigit(lexer->current_char)){
+            token_string[(*token_length)++] = lexer->current_char;
+      
+            realloc_check(token_string, token_length, token_size);
+    
+            advance(lexer);
+        }
+        return true;
+    }
+
+    // number
+    else if (isdigit(lexer->current_char)){
+        int saw_digit = false;
+        while (isdigit(lexer->current_char) || lexer->current_char == '.'){
+            if (lexer->current_char == '.'){
+                if (!saw_digit){
+                    saw_digit = true;
+                }
+                else{
+                    return false;
+                }
+            }
+            token_string[(*token_length)++] = lexer->current_char;
+      
+            realloc_check(token_string, token_length, token_size);
+    
+            advance(lexer);  
+        }
+        return true;
+    }
+
+    return false;
 }
