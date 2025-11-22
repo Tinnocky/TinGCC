@@ -6,9 +6,11 @@ Keyword keywords[] = {
     {"create", CREATE}, {"as", AS}, {"start", START_SCOPE}, {"end", END_SCOPE},
     {"if", IF}, {"else", ELSE}, {"while", WHILE}, {"stop", STOP}, {"skip", SKIP}, 
     {"say", SAY}, {"input", INPUT}, {"with", WITH}, {"return", RETURN}, 
-    {"true", TRUE}, {"false", FALSE}, {"and", AND}, {"or", OR},
+    {"true", TRUE}, {"false", FALSE}, {"repeat", REPEAT}, {"on", ON},
 
     {"int", INT}, {"float", FLOAT}, {"char", CHAR}, {"list", LIST}, {"string", STRING},
+
+    {"is", IS}, {"not", NOT}, {"more", MORE}, {"less", LESS}, {"and", AND}, {"or", OR},
 
     {"=", ASSIGN}, {"+", PLUS}, {"-", MINUS}, {"*", MULT}, {"/", DIVIDE},
     {"%%", MODULO}, {"++", INCREMENT}, {"--", DECREMENT},
@@ -19,7 +21,6 @@ Keyword keywords[] = {
 
     {NULL, UNKNOWN}
 };
-
 
 
 // intialization and main stuff
@@ -38,8 +39,15 @@ Lexer *init_lexer(const char *filename){
     return lexer;
 }
 
+void advance(Lexer *lexer){
+    lexer->current_char = fgetc(lexer->file);
+}
 
-void close_lexer(Lexer *lexer){
+void go_back(Lexer *lexer){
+    ungetc(lexer->current_char, lexer->file);
+}
+
+void close_lexer(const Lexer *lexer){
     fclose(lexer->file);
     free(lexer);
 }
@@ -71,21 +79,6 @@ ASTNode *run_lexer(Lexer *lexer){
         bool is_string = false;
         char *token_string = get_token_string(lexer, &token_length, &token_size, &is_string);
 
-        // break at EOF
-        if (token_string[0] == '\0') {
-            // add EOF token to end of file
-            Token *current_token = malloc(sizeof(Token));
-            current_token->type = EOF_TOKEN;
-            current_token->line = lexer->line;
-            current_token->string = "";
-            current_token->length = 0;
-            free(token_string);
-            ast->token = *current_token;
-            free(current_token);
-
-            break; // end of file or just spaces
-        }
-
         // got full string - time to turn it to a token!*/
         Token *current_token = get_token(lexer, token_string, token_length, is_string);
         free(token_string);
@@ -114,19 +107,13 @@ ASTNode *run_lexer(Lexer *lexer){
 TokenType determine_token_type(Lexer *lexer, const char *token_string, const int token_length){
     /* go through each available keyword and token type and determine what type is our token.
     doesnt check strings! that part is handled earlier. */
-    // KEYWORDS, TYPES, AND, OR, PUNCTUATION, DELIMITERS, ASSIGNMENT, check in keywords[] for specifics
+    // KEYWORDS, TYPES, AND, OR, PUNCTUATION, DELIMITERS, ASSIGNMENT, etc... check in keywords[] for specifics
     int word = 0;
     while (keywords[word].string != NULL){
         if (strcmp(keywords[word].string, token_string) == 0){
             return keywords[word].type;
         }
         word++;
-    }
-
-    // check if the token is a multiword-token
-    TokenType multiword_check_output = determine_multiword_tokens(lexer, token_string, token_length);
-    if (multiword_check_output != -2){
-        return multiword_check_output;
     }
 
     // check if the token is a number
@@ -136,10 +123,10 @@ TokenType determine_token_type(Lexer *lexer, const char *token_string, const int
     }
 
     // failed all other checks. must be an identifier
-    if (token_string[0] == "_" || isalpha(token_string[0])){
+    if (token_string[0] == '_' || isalpha(token_string[0])){
         if (token_length > 1){
             for (int i = 1; i < token_length; i++){
-                if (token_string[i] != "_" && !isalpha(token_string[i]) && !isdigit(token_string[i])){
+                if (token_string[i] != '_' && !isalpha(token_string[i]) && !isdigit(token_string[i])){
                     return UNKNOWN; // because identifiers can only have alphas, digits and _.
                 }
             }
@@ -151,79 +138,10 @@ TokenType determine_token_type(Lexer *lexer, const char *token_string, const int
 }
 
 
-TokenType determine_multiword_tokens(Lexer *lexer, const char *token_string, const int token_length){
-    // check if the token is repeat/repeat on and multiword boolean operators
-    // REPEAT AND REPEAT ON 
-    if (strcmp(token_string, "repeat") == 0){
-        // check for repeat on
-        if (match_expected_token(lexer, "on")){
-            consume_filler_token(lexer);
-            return REPEAT_ON;
-        }
-        return REPEAT;
-    }
-        
-    // IS AND IS NOT
-    if (strcmp(token_string, "is") == 0){
-        // check for is not
-        if (match_expected_token(lexer, "not")){
-            consume_filler_token(lexer);
-            return IS_NOT;
-        }
-        return IS;
-    }
-
-    // NOT LESS THAN AND NOT MORE THAN
-    if (strcmp(token_string, "not") == 0){
-        // not less than
-        if (match_expected_token(lexer, "less")){
-            consume_filler_token(lexer);
-
-            if (match_expected_token(lexer, "than")){
-                consume_filler_token(lexer);
-                return NOT_LESS_THAN;
-            }
-            return UNKNOWN;
-        }
-        // not more than
-        else if (match_expected_token(lexer, "more")){
-            consume_filler_token(lexer);
-
-            if (match_expected_token(lexer, "than")){
-                consume_filler_token(lexer);
-                return NOT_MORE_THAN;
-            }
-            return UNKNOWN;
-        }
-        return UNKNOWN;
-    }
-
-    // LESS THAN
-    if (strcmp(token_string, "less") == 0){
-        if (match_expected_token(lexer, "than")){
-            consume_filler_token(lexer);
-            return LESS_THAN;
-        }
-        return UNKNOWN;
-    }
-
-    // MORE THAN
-    if (strcmp(token_string, "more") == 0){
-        if (match_expected_token(lexer, "than")){
-            consume_filler_token(lexer);
-            return MORE_THAN;
-        }
-        return UNKNOWN;
-    }
-
-    //wasnt any of these
-    return NOT_FOUND;
-}
-
 TokenType determine_number_token(Lexer *lexer, const char *token_string, const int token_length){
     /* check if token is an int or a float or neither. the + or - token check
         was already done before. */
-    if (is_digit(token_string[0]) || token_string[0] == '+' || token_string[0] == '-'){
+    if (is_digit(token_string[0])){
         // determine what kind of number - int or float
         TokenType number_type = INTEGER_LITERAL; //start with possible integer
         bool saw_dot = false;
@@ -286,126 +204,39 @@ Token *get_token(Lexer *lexer, const char *token_string, int token_length, bool 
 }
 
 
-
-// get next string and such
 char *get_token_string(Lexer *lexer, int *token_length, int *token_size, bool *is_string){
-    /* gets the next token in the file as a string */
-    char *token_string = malloc(*token_size);
-    check_nullptr(token_string, "Lexer - Malloc for a token string failed. \n");
-    skip_unnecessary(lexer);
+    /* get the next token in the file, as a string. */
+    // check for a string or character literal
 
-    // next token is a string or character
-    if (lexer->current_char == '\'' || lexer->current_char == '\"'){
-        char opening = lexer->current_char;
-        lexer->current_char = fgetc(lexer->file); // skip first ' or "
+    // check for multi character keywords
 
-        while (lexer->current_char != EOF &&
-            ((opening == '\'' && lexer->current_char != '\'') || 
-             (opening == '\"' && lexer->current_char != '\"'))) {
+    // check for single character keywords
 
-            token_string[(*token_length)++] = lexer->current_char;
+    // check for words or numbers
 
-            // realloc if needed
-            if (*token_length == *token_size){
-                *token_size *= 2;
-                token_string = realloc(token_string, *token_size);
-                check_nullptr(token_string, "Lexer - Realloc for a token string failed\n");
-            }
-            lexer->current_char = fgetc(lexer->file);
-        }
-
-        if (lexer->current_char == EOF){
-            print_error("Lexer - String not closed\n");
-        }
-
-        lexer->current_char = fgetc(lexer->file); // skip '
-        token_string[*token_length] = '\0';
-        *is_string = true; // mark as a string (or character)
-        return token_string; // return inside of string or character
-    }
-
-    // next token is a not a string or character
-    while (lexer->current_char != ' ' && lexer->current_char != '\t' && lexer->current_char != '\n' && 
-        lexer->current_char != EOF && lexer->current_char != ','){
-        token_string[(*token_length)++] = lexer->current_char;
-
-        // realloc if needed
-        if (*token_length == *token_size){
-            *token_size *= 2;
-            token_string = realloc(token_string, *token_size);
-            check_nullptr(token_string, "Lexer - Realloc for a token string failed\n");
-        }
-        lexer->current_char = fgetc(lexer->file);
-    }
-
-    token_string[*token_length] = '\0'; // null-terminate
-    return token_string;
+    // is probably an identifier now that weve checked everything else
 }
 
 
 void skip_unnecessary(Lexer *lexer){
-    /* skips unnecessary characters in the file such as whitespaces and comments. */
-    // skip whitespace
-    bool finished_skipping = false;
-    while(!finished_skipping){
-
-        while (lexer->current_char == ' ' || lexer->current_char == '\t' || lexer->current_char == '\n') {
-            lexer->current_char = fgetc(lexer->file);
-        }
-     
-        // skip comments
-        if (lexer->current_char == '|'){
-            lexer->current_char = fgetc(lexer->file); // skip first |
-        
-            while (lexer->current_char != '|' && lexer->current_char != EOF){
-                if (lexer->current_char == '\n'){
-                    lexer->line++; // still increment using \n for comments
-                }
-                lexer->current_char = fgetc(lexer->file);
-            }
-    
-            if (lexer->current_char == EOF){
-                print_error("Lexer - Comment not closed \n");
-            }
-
-            lexer->current_char = fgetc(lexer->file); // skip ending |
-            continue;
-        }
-
-        finished_skipping = true;
-    }
+    /* skips unnecessary stuff such as comments or whitspaces.
+        advances lines. */
 }
 
 
-char *peek_token_string(Lexer *lexer, int *token_length, int *token_size, bool *is_string){
-    Lexer saved_lexer = *lexer; // copy current lexer character
-
-    char *token_string = get_token_string(lexer, token_length, token_size, is_string);
-
-    *lexer = saved_lexer; // restore lexer to original
-    return token_string;
+bool read_string_literal(Lexer *lexer, char *token_string, int *token_length, int *token_size){
+    /* reads the next token if its in between quotes into *token_string.
+        returns bool for if its a string or not. */
 }
 
 
-bool match_expected_token(Lexer *lexer, const char *expected_string){
-    int token_size = INITIAL_TOKEN_LENGTH;
-    int token_length = 0;
-    bool is_string = false;
-    char *token_string = peek_token_string(lexer, &token_length, &token_size, &is_string);
-    
-    if (strcmp(token_string, expected_string) == 0){
-        free(token_string);
-        return true;
-    }
-    free(token_string);
-    return false;
+bool read_operator(Lexer *lexer, char *token_string, int *token_length, int *token_size){
+    /* reads the next token operator into *token_string.
+        returns bool for if its an operator or not. */
 }
 
 
-void consume_filler_token(Lexer *lexer){
-    // eats the next string in the file and frees it immediatly after.
-    int filler_length, filler_size;
-    bool filler_is_string;
-    char *filler_token = get_token_string(lexer, &filler_length, &filler_size, &filler_is_string); // eat next token cuz we found it
-    free(filler_token); // free because we dont use it
+bool read_word(Lexer *lexer, char *token_string, int *token_length, int *token_size){
+    /* reads the next token into *token_string until a whitespace or delimiter is hit.
+        could be numbers, words, etc */
 }
