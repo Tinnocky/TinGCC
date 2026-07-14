@@ -1,0 +1,90 @@
+| TinG language showcase |
+
+| --- global variables --- |
+create greeting as string = "Hello, TinG!"
+create pi as float = 3.14
+
+| --- a simple function with no params --- |
+void say_hello start:
+    say greeting
+end
+
+| --- function with params and default value --- |
+int square with [num as int = 0] start:
+    return num * num
+end
+
+| --- function returning a float --- |
+float circle_area with [radius as float] start:
+    return pi * radius * radius
+end
+
+| --- function showing control flow --- |
+int classify with [n as int] start:
+    if (n less than 0) start:
+        return -1
+    end
+    else (n is 0) start:
+        return 0
+    end
+    else start:
+        return 1
+    end
+end
+
+| --- function showing loops --- |
+void count_stuff with [limit as int] start:
+    | basic repeat with step |
+    repeat (i, 0 to limit, step 2) start:
+        say i
+    end
+
+    | repeat on a list |
+    create nums as int list = [10, 20, 30, 40, 50]
+    repeat on (n in nums) start:
+        say square(n)
+    end
+
+    | while loop |
+    create x as int = 0
+    while (x less than limit) start:
+        x += 1
+        if (x % 2 is 0) start:
+            skip
+        end
+        say x
+    end
+end
+
+| --- function showing nested lists --- |
+void matrix_example start:
+    create row as int list = [1, 2, 3]
+    create matrix as int list list = [[1, 2], [3, 4], [5, 6]]
+    say length(row)
+    append(row, 4)
+    say row[0]
+end
+
+| --- main function --- |
+void main start:
+    say_hello()
+
+    | type casting |
+    create n as int = to_int(input())
+    say circle_area(to_float(n))
+
+    | random number |
+    create r as int = random(1, 100)
+    say r
+
+    | string operations |
+    create name as string = "TinG"
+    say length(name)
+
+    | classify result |
+    create result as int = classify(n)
+    say result
+
+    count_stuff(n)
+    matrix_example()
+end

@@ -1,0 +1,96 @@
+PROGRAM_NODE (line 0)
+├─ CREATE_VAR_NODE (line 1)
+│  ├─ name: 'greeting'
+│  ├─ type: TYPE_STRING
+│  └─ value:
+│     └─ LITERAL_NODE (line 1)
+│        └─ TYPE_STRING 'Hello'
+├─ CREATE_VAR_NODE (line 2)
+│  ├─ name: 'x'
+│  ├─ type: TYPE_INT
+│  └─ value:
+│     └─ LITERAL_NODE (line 2)
+│        └─ TYPE_INT '10'
+├─ CREATE_VAR_NODE (line 3)
+│  ├─ name: 'lst'
+│  ├─ type: TYPE_LIST(TYPE_INT)
+│  └─ value:
+│     └─ LIST_LITERAL_NODE (line 3)
+│        └─ values:
+│           ├─ LITERAL_NODE (line 3)
+│           │  └─ TYPE_INT '1'
+│           ├─ LITERAL_NODE (line 3)
+│           │  └─ TYPE_INT '2'
+│           └─ LITERAL_NODE (line 3)
+│              └─ TYPE_INT '3'
+└─ FUNCTION_NODE (line 4)
+   ├─ name: 'main'
+   ├─ return: TYPE_VOID
+   └─ body:
+      ├─ SAY_NODE (line 5)
+      │  └─ value:
+      │     └─ IDENTIFIER_NODE (line 5)
+      │        └─ name: 'greeting'
+      ├─ IF_NODE (line 6)
+      │  ├─ condition:
+      │  │  └─ COMPARISON_EXPR_NODE (line 6)
+      │  │     ├─ op: MORE_TOKEN
+      │  │     ├─ left:
+      │  │     │  └─ IDENTIFIER_NODE (line 6)
+      │  │     │     └─ name: 'x'
+      │  │     └─ right:
+      │  │        └─ LITERAL_NODE (line 6)
+      │  │           └─ TYPE_INT '5'
+      │  ├─ body:
+      │  │  └─ SAY_NODE (line 7)
+      │  │     └─ value:
+      │  │        └─ IDENTIFIER_NODE (line 7)
+      │  │           └─ name: 'x'
+      │  └─ else:
+      │     └─ ELSE_NODE (line 8)
+      │        └─ body:
+      │           └─ SAY_NODE (line 9)
+      │              └─ value:
+      │                 └─ LITERAL_NODE (line 9)
+      │                    └─ TYPE_INT '0'
+      ├─ WHILE_NODE (line 11)
+      │  ├─ condition:
+      │  │  └─ COMPARISON_EXPR_NODE (line 11)
+      │  │     ├─ op: MORE_TOKEN
+      │  │     ├─ left:
+      │  │     │  └─ IDENTIFIER_NODE (line 11)
+      │  │     │     └─ name: 'x'
+      │  │     └─ right:
+      │  │        └─ LITERAL_NODE (line 11)
+      │  │           └─ TYPE_INT '0'
+      │  └─ body:
+      │     └─ ASSIGNMENT_NODE (line 12)
+      │        ├─ name: 'x'
+      │        ├─ op: SUB_TO_TOKEN
+      │        └─ value:
+      │           └─ LITERAL_NODE (line 12)
+      │              └─ TYPE_INT '1'
+      ├─ REPEAT_NODE (line 14)
+      │  ├─ var: 'i'
+      │  ├─ from:
+      │  │  └─ LITERAL_NODE (line 14)
+      │  │     └─ TYPE_INT '0'
+      │  ├─ to:
+      │  │  └─ LITERAL_NODE (line 14)
+      │  │     └─ TYPE_INT '3'
+      │  ├─ step:
+      │  │  └─ LITERAL_NODE (line 14)
+      │  │     └─ TYPE_INT '1'
+      │  └─ body:
+      │     └─ SAY_NODE (line 15)
+      │        └─ value:
+      │           └─ IDENTIFIER_NODE (line 15)
+      │              └─ name: 'i'
+      └─ REPEAT_ON_NODE (line 17)
+         ├─ var: 'n'
+         ├─ list: 'lst'
+         └─ body:
+            └─ SAY_NODE (line 18)
+               └─ value:
+                  └─ IDENTIFIER_NODE (line 18)
+                     └─ name: 'n'

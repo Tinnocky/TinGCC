@@ -1,0 +1,11 @@
+void main start:
+    say 1
+end
+
+int add with [a as int, b as int] start:
+    return a + b
+end
+
+float area with [r as float = 1.0] start:
+    return r * r
+end

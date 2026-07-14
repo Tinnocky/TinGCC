@@ -1,0 +1,32 @@
+PROGRAM_NODE (line 0)
+├─ SAY_NODE (line 1)
+│  └─ value:
+│     └─ UNARY_NODE (line 1)
+│        ├─ op: MINUS_TOKEN
+│        └─ operand:
+│           └─ LITERAL_NODE (line 1)
+│              └─ TYPE_INT '5'
+├─ SAY_NODE (line 2)
+│  └─ value:
+│     └─ UNARY_NODE (line 2)
+│        ├─ op: MINUS_TOKEN
+│        └─ operand:
+│           └─ UNARY_NODE (line 2)
+│              ├─ op: MINUS_TOKEN
+│              └─ operand:
+│                 └─ LITERAL_NODE (line 2)
+│                    └─ TYPE_INT '5'
+└─ IF_NODE (line 3)
+   ├─ condition:
+   │  └─ UNARY_NODE (line 3)
+   │     ├─ op: NOT_TOKEN
+   │     └─ operand:
+   │        └─ COMPARISON_EXPR_NODE (line 3)
+   │           ├─ op: IS_TOKEN
+   │           ├─ left:
+   │           │  └─ IDENTIFIER_NODE (line 3)
+   │           │     └─ name: 'x'
+   │           └─ right:
+   │              └─ LITERAL_NODE (line 3)
+   │                 └─ TYPE_INT '5'
+   └─ body:

@@ -1,0 +1,7 @@
+if (x is 5) start:
+    say 1
+else (x is 10) start:
+    say 2
+else start:
+    say 3
+end

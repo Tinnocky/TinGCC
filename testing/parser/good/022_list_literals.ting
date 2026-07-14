@@ -1,0 +1,2 @@
+create numbers as int list = [1,2,3]
+create empty as int list = []

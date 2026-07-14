@@ -1,0 +1,16 @@
+PROGRAM_NODE (line 0)
+├─ CREATE_VAR_NODE (line 1)
+│  ├─ name: 'a'
+│  └─ type: TYPE_INT
+├─ CREATE_VAR_NODE (line 2)
+│  ├─ name: 'b'
+│  └─ type: TYPE_FLOAT
+├─ CREATE_VAR_NODE (line 3)
+│  ├─ name: 'c'
+│  └─ type: TYPE_CHAR
+├─ CREATE_VAR_NODE (line 4)
+│  ├─ name: 'd'
+│  └─ type: TYPE_STRING
+└─ CREATE_VAR_NODE (line 5)
+   ├─ name: 'e'
+   └─ type: TYPE_BOOL

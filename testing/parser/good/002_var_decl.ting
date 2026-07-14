@@ -1,0 +1,3 @@
+create x as int = 5
+create name as string = "hello"
+create flag as bool = true

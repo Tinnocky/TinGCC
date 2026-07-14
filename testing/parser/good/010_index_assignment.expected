@@ -1,0 +1,25 @@
+PROGRAM_NODE (line 0)
+├─ ASSIGNMENT_NODE (line 1)
+│  ├─ name: 'numbers'
+│  ├─ op: ASSIGN_TOKEN
+│  ├─ index:
+│  │  └─ LITERAL_NODE (line 1)
+│  │     └─ TYPE_INT '0'
+│  └─ value:
+│     └─ LITERAL_NODE (line 1)
+│        └─ TYPE_INT '5'
+└─ ASSIGNMENT_NODE (line 2)
+   ├─ name: 'numbers'
+   ├─ op: ADD_TO_TOKEN
+   ├─ index:
+   │  └─ ARITHMETIC_EXPR_NODE (line 2)
+   │     ├─ op: PLUS_TOKEN
+   │     ├─ left:
+   │     │  └─ IDENTIFIER_NODE (line 2)
+   │     │     └─ name: 'x'
+   │     └─ right:
+   │        └─ LITERAL_NODE (line 2)
+   │           └─ TYPE_INT '1'
+   └─ value:
+      └─ LITERAL_NODE (line 2)
+         └─ TYPE_INT '10'

@@ -1,0 +1,14 @@
+PROGRAM_NODE (line 0)
+├─ FUNCTION_NODE (line 1)
+│  ├─ name: 'nothing'
+│  ├─ return: TYPE_VOID
+│  └─ body:
+│     └─ RETURN_NODE (line 2)
+└─ FUNCTION_NODE (line 4)
+   ├─ name: 'value'
+   ├─ return: TYPE_INT
+   └─ body:
+      └─ RETURN_NODE (line 5)
+         └─ value:
+            └─ LITERAL_NODE (line 5)
+               └─ TYPE_INT '5'

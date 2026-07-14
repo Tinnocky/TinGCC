@@ -1,0 +1,36 @@
+PROGRAM_NODE (line 0)
+├─ SAY_NODE (line 1)
+│  └─ value:
+│     └─ FUNCTION_CALL_NODE (line 1)
+│        ├─ name: 'hello'
+│        └─ args:
+├─ SAY_NODE (line 2)
+│  └─ value:
+│     └─ FUNCTION_CALL_NODE (line 2)
+│        ├─ name: 'add'
+│        └─ args:
+│           ├─ LITERAL_NODE (line 2)
+│           │  └─ TYPE_INT '1'
+│           └─ LITERAL_NODE (line 2)
+│              └─ TYPE_INT '2'
+└─ SAY_NODE (line 3)
+   └─ value:
+      └─ FUNCTION_CALL_NODE (line 3)
+         ├─ name: 'add'
+         └─ args:
+            ├─ ARITHMETIC_EXPR_NODE (line 3)
+            │  ├─ op: PLUS_TOKEN
+            │  ├─ left:
+            │  │  └─ LITERAL_NODE (line 3)
+            │  │     └─ TYPE_INT '1'
+            │  └─ right:
+            │     └─ LITERAL_NODE (line 3)
+            │        └─ TYPE_INT '2'
+            └─ ARITHMETIC_EXPR_NODE (line 3)
+               ├─ op: MULT_TOKEN
+               ├─ left:
+               │  └─ LITERAL_NODE (line 3)
+               │     └─ TYPE_INT '3'
+               └─ right:
+                  └─ LITERAL_NODE (line 3)
+                     └─ TYPE_INT '4'

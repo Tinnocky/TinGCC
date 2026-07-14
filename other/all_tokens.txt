@@ -1,0 +1,69 @@
+/* --- KEYWORDS --- */
+create [var] -> create variable
+as [type] -> declare type of variable
+start -> open scope
+end -> end scope
+if
+else
+while
+repeat -> for
+repeat on -> for each
+stop -> break
+skip -> continue
+say -> print
+input [type] 
+with [] -> declare 
+return
+true
+false
+int
+float
+char
+[length] [type] list -> array with fixed type and length
+string -> a char list, dynamic 
+
+/* --- BOOLEAN OPERATORS --- */
+is
+is not
+more than
+not more than
+less than
+not less than
+and
+or
+
+/* --- ARITHMETIC OPERATORS --- */
++
+-
+*
+/
+%
+++
+--
++=
+-=
+*=
+/=
+%=
+
+/* --- ASSIGNMENT --- */
+=
+
+/* --- PUNCTUATION / DELIMITERS --- */
+( ) -> call function, ifs, elses, whiles, fors...
+[ ] -> function parameters declarations, initialize lists, 
+, -> 
+: -> various
+
+/* --- LITERALS --- */
+INTEGER_LITERAL
+FLOAT_LITERAL
+CHAR_LITERAL
+STRING_LITERAL
+BOOLEAN_LITERAL
+
+/* --- IDENTIFIERS --- */
+IDENTIFIER
+
+/* --- SPECIAL --- */
+EOF

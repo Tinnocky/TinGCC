@@ -1,0 +1,4 @@
+create x int | missing as |
+
+if (x is 5) start | missing the colon |
+end

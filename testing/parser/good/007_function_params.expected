@@ -1,0 +1,48 @@
+PROGRAM_NODE (line 0)
+├─ FUNCTION_NODE (line 1)
+│  ├─ name: 'print_values'
+│  ├─ return: TYPE_VOID
+│  ├─ params:
+│  │  ├─ FUNCTION_PARAM_NODE (line 1)
+│  │  │  ├─ name: 'x'
+│  │  │  └─ type: TYPE_INT
+│  │  └─ FUNCTION_PARAM_NODE (line 1)
+│  │     ├─ name: 'y'
+│  │     └─ type: TYPE_STRING
+│  └─ body:
+│     ├─ SAY_NODE (line 2)
+│     │  └─ value:
+│     │     └─ IDENTIFIER_NODE (line 2)
+│     │        └─ name: 'x'
+│     └─ SAY_NODE (line 3)
+│        └─ value:
+│           └─ IDENTIFIER_NODE (line 3)
+│              └─ name: 'y'
+└─ FUNCTION_NODE (line 5)
+   ├─ name: 'test'
+   ├─ return: TYPE_VOID
+   ├─ params:
+   │  ├─ FUNCTION_PARAM_NODE (line 5)
+   │  │  ├─ name: 'a'
+   │  │  └─ type: TYPE_FLOAT
+   │  ├─ FUNCTION_PARAM_NODE (line 5)
+   │  │  ├─ name: 'x'
+   │  │  ├─ type: TYPE_INT
+   │  │  └─ default:
+   │  │     └─ LITERAL_NODE (line 5)
+   │  │        └─ TYPE_INT '10'
+   │  └─ FUNCTION_PARAM_NODE (line 5)
+   │     ├─ name: 'name'
+   │     ├─ type: TYPE_STRING
+   │     └─ default:
+   │        └─ LITERAL_NODE (line 5)
+   │           └─ TYPE_STRING 'hi'
+   └─ body:
+      ├─ SAY_NODE (line 6)
+      │  └─ value:
+      │     └─ IDENTIFIER_NODE (line 6)
+      │        └─ name: 'x'
+      └─ SAY_NODE (line 7)
+         └─ value:
+            └─ IDENTIFIER_NODE (line 7)
+               └─ name: 'name'

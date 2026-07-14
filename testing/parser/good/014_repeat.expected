@@ -1,0 +1,30 @@
+PROGRAM_NODE (line 0)
+├─ REPEAT_NODE (line 1)
+│  ├─ var: 'i'
+│  ├─ from:
+│  │  └─ LITERAL_NODE (line 1)
+│  │     └─ TYPE_INT '0'
+│  ├─ to:
+│  │  └─ LITERAL_NODE (line 1)
+│  │     └─ TYPE_INT '10'
+│  └─ body:
+│     └─ SAY_NODE (line 2)
+│        └─ value:
+│           └─ IDENTIFIER_NODE (line 2)
+│              └─ name: 'i'
+└─ REPEAT_NODE (line 4)
+   ├─ var: 'i'
+   ├─ from:
+   │  └─ LITERAL_NODE (line 4)
+   │     └─ TYPE_INT '0'
+   ├─ to:
+   │  └─ LITERAL_NODE (line 4)
+   │     └─ TYPE_INT '10'
+   ├─ step:
+   │  └─ LITERAL_NODE (line 4)
+   │     └─ TYPE_INT '2'
+   └─ body:
+      └─ SAY_NODE (line 5)
+         └─ value:
+            └─ IDENTIFIER_NODE (line 5)
+               └─ name: 'i'

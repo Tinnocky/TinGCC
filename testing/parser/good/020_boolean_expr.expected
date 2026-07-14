@@ -1,0 +1,115 @@
+PROGRAM_NODE (line 0)
+├─ IF_NODE (line 1)
+│  ├─ condition:
+│  │  └─ COMPARISON_EXPR_NODE (line 1)
+│  │     ├─ op: IS_TOKEN
+│  │     ├─ left:
+│  │     │  └─ IDENTIFIER_NODE (line 1)
+│  │     │     └─ name: 'x'
+│  │     └─ right:
+│  │        └─ LITERAL_NODE (line 1)
+│  │           └─ TYPE_INT '5'
+│  └─ body:
+├─ IF_NODE (line 3)
+│  ├─ condition:
+│  │  └─ COMPARISON_EXPR_NODE (line 3)
+│  │     ├─ op: MORE_TOKEN
+│  │     ├─ left:
+│  │     │  └─ IDENTIFIER_NODE (line 3)
+│  │     │     └─ name: 'x'
+│  │     └─ right:
+│  │        └─ LITERAL_NODE (line 3)
+│  │           └─ TYPE_INT '5'
+│  └─ body:
+├─ IF_NODE (line 5)
+│  ├─ condition:
+│  │  └─ COMPARISON_EXPR_NODE (line 5)
+│  │     ├─ op: LESS_TOKEN
+│  │     ├─ left:
+│  │     │  └─ IDENTIFIER_NODE (line 5)
+│  │     │     └─ name: 'x'
+│  │     └─ right:
+│  │        └─ LITERAL_NODE (line 5)
+│  │           └─ TYPE_INT '5'
+│  └─ body:
+├─ IF_NODE (line 7)
+│  ├─ condition:
+│  │  └─ LOGICAL_EXPR_NODE (line 7)
+│  │     ├─ op: AND_TOKEN
+│  │     ├─ left:
+│  │     │  └─ COMPARISON_EXPR_NODE (line 7)
+│  │     │     ├─ op: IS_TOKEN
+│  │     │     ├─ left:
+│  │     │     │  └─ IDENTIFIER_NODE (line 7)
+│  │     │     │     └─ name: 'a'
+│  │     │     └─ right:
+│  │     │        └─ IDENTIFIER_NODE (line 7)
+│  │     │           └─ name: 'b'
+│  │     └─ right:
+│  │        └─ COMPARISON_EXPR_NODE (line 7)
+│  │           ├─ op: IS_TOKEN
+│  │           ├─ left:
+│  │           │  └─ IDENTIFIER_NODE (line 7)
+│  │           │     └─ name: 'c'
+│  │           └─ right:
+│  │              └─ IDENTIFIER_NODE (line 7)
+│  │                 └─ name: 'd'
+│  └─ body:
+├─ IF_NODE (line 9)
+│  ├─ condition:
+│  │  └─ LOGICAL_EXPR_NODE (line 9)
+│  │     ├─ op: OR_TOKEN
+│  │     ├─ left:
+│  │     │  └─ COMPARISON_EXPR_NODE (line 9)
+│  │     │     ├─ op: IS_TOKEN
+│  │     │     ├─ left:
+│  │     │     │  └─ IDENTIFIER_NODE (line 9)
+│  │     │     │     └─ name: 'a'
+│  │     │     └─ right:
+│  │     │        └─ IDENTIFIER_NODE (line 9)
+│  │     │           └─ name: 'b'
+│  │     └─ right:
+│  │        └─ COMPARISON_EXPR_NODE (line 9)
+│  │           ├─ op: IS_TOKEN
+│  │           ├─ left:
+│  │           │  └─ IDENTIFIER_NODE (line 9)
+│  │           │     └─ name: 'c'
+│  │           └─ right:
+│  │              └─ IDENTIFIER_NODE (line 9)
+│  │                 └─ name: 'd'
+│  └─ body:
+└─ IF_NODE (line 11)
+   ├─ condition:
+   │  └─ LOGICAL_EXPR_NODE (line 11)
+   │     ├─ op: OR_TOKEN
+   │     ├─ left:
+   │     │  └─ LOGICAL_EXPR_NODE (line 11)
+   │     │     ├─ op: AND_TOKEN
+   │     │     ├─ left:
+   │     │     │  └─ COMPARISON_EXPR_NODE (line 11)
+   │     │     │     ├─ op: IS_TOKEN
+   │     │     │     ├─ left:
+   │     │     │     │  └─ IDENTIFIER_NODE (line 11)
+   │     │     │     │     └─ name: 'a'
+   │     │     │     └─ right:
+   │     │     │        └─ IDENTIFIER_NODE (line 11)
+   │     │     │           └─ name: 'b'
+   │     │     └─ right:
+   │     │        └─ COMPARISON_EXPR_NODE (line 11)
+   │     │           ├─ op: IS_TOKEN
+   │     │           ├─ left:
+   │     │           │  └─ IDENTIFIER_NODE (line 11)
+   │     │           │     └─ name: 'c'
+   │     │           └─ right:
+   │     │              └─ IDENTIFIER_NODE (line 11)
+   │     │                 └─ name: 'd'
+   │     └─ right:
+   │        └─ COMPARISON_EXPR_NODE (line 11)
+   │           ├─ op: IS_TOKEN
+   │           ├─ left:
+   │           │  └─ IDENTIFIER_NODE (line 11)
+   │           │     └─ name: 'e'
+   │           └─ right:
+   │              └─ IDENTIFIER_NODE (line 11)
+   │                 └─ name: 'f'
+   └─ body:

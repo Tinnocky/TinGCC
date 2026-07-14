@@ -1,0 +1,8 @@
+void print_values with [x as int, y as string] start:
+    say x
+    say y
+end
+void test with [a as float, x as int = 10, name as string = "hi"] start:
+    say x
+    say name
+end

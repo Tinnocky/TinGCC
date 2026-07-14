@@ -1,0 +1,7 @@
+PROGRAM_NODE (line 0)
+├─ CREATE_VAR_NODE (line 1)
+│  ├─ name: 'x'
+│  └─ type: TYPE_INT
+└─ CREATE_VAR_NODE (line 2)
+   ├─ name: 'text'
+   └─ type: TYPE_STRING

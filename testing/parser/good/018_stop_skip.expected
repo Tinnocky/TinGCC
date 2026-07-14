@@ -1,0 +1,7 @@
+PROGRAM_NODE (line 0)
+└─ FUNCTION_NODE (line 1)
+   ├─ name: 'main'
+   ├─ return: TYPE_VOID
+   └─ body:
+      ├─ STOP_NODE (line 2)
+      └─ SKIP_NODE (line 3)

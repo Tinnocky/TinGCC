@@ -1,0 +1,2 @@
+numbers[0] = 5
+numbers[x + 1] += 10

@@ -1,0 +1,9 @@
+PROGRAM_NODE (line 0)
+└─ REPEAT_ON_NODE (line 1)
+   ├─ var: 'item'
+   ├─ list: 'items'
+   └─ body:
+      └─ SAY_NODE (line 2)
+         └─ value:
+            └─ IDENTIFIER_NODE (line 2)
+               └─ name: 'item'

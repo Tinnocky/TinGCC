@@ -1,0 +1,4 @@
+say 5
+say x
+say x + 5
+say hello()

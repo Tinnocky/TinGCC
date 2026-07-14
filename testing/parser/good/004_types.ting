@@ -1,0 +1,5 @@
+create a as int
+create b as float
+create c as char
+create d as string
+create e as bool

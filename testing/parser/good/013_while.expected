@@ -1,0 +1,18 @@
+PROGRAM_NODE (line 0)
+└─ WHILE_NODE (line 1)
+   ├─ condition:
+   │  └─ COMPARISON_EXPR_NODE (line 1)
+   │     ├─ op: MORE_TOKEN
+   │     ├─ left:
+   │     │  └─ IDENTIFIER_NODE (line 1)
+   │     │     └─ name: 'x'
+   │     └─ right:
+   │        └─ LITERAL_NODE (line 1)
+   │           └─ TYPE_INT '0'
+   └─ body:
+      └─ ASSIGNMENT_NODE (line 2)
+         ├─ name: 'x'
+         ├─ op: SUB_TO_TOKEN
+         └─ value:
+            └─ LITERAL_NODE (line 2)
+               └─ TYPE_INT '1'

@@ -1,0 +1,3 @@
+if (x is 5) start:
+    say x
+end

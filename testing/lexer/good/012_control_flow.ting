@@ -1,0 +1,19 @@
+if (a is b) start:
+    say a
+end | not supposed to be an "end" here but okay lol, this is the lexer |
+
+else start:
+    say b
+end
+
+while (x less than 10) start:
+    x += 1
+end
+
+repeat (i, 0, 10, step 2) start:
+    say i
+end
+
+repeat on (n in lst) start:
+    say n
+end

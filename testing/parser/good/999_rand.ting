@@ -1,0 +1,11 @@
+void main start:
+    if (2 less than b) start:
+        say "meow"
+    else start:
+        say "[coco(13)]"
+    end
+end
+
+int coco with [num as int] start:
+    return num * 14
+end

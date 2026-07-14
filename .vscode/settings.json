@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "lexer.h": "c",
+        "utils.h": "c",
+        "random": "c"
+    }
+}

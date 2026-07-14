@@ -1,0 +1,16 @@
+PROGRAM_NODE (line 0)
+└─ IF_NODE (line 1)
+   ├─ condition:
+   │  └─ COMPARISON_EXPR_NODE (line 1)
+   │     ├─ op: IS_TOKEN
+   │     ├─ left:
+   │     │  └─ IDENTIFIER_NODE (line 1)
+   │     │     └─ name: 'x'
+   │     └─ right:
+   │        └─ LITERAL_NODE (line 1)
+   │           └─ TYPE_INT '5'
+   └─ body:
+      └─ SAY_NODE (line 2)
+         └─ value:
+            └─ IDENTIFIER_NODE (line 2)
+               └─ name: 'x'

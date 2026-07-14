@@ -1,0 +1,4 @@
+*.o
+*.out
+tingcc_lexer_test
+testing/lexer/tingcc_lexer_test

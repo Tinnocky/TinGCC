@@ -1,0 +1,12 @@
+if (x is 5) start:
+end
+if (x more than 5) start:
+end
+if (x less than 5) start:
+end
+if (a is b and c is d) start:
+end
+if (a is b or c is d) start:
+end
+if (a is b and c is d or e is f) start:
+end

@@ -1,0 +1,6 @@
+void nothing start:
+    return
+end
+int value start:
+    return 5
+end

@@ -1,0 +1,145 @@
+(* ================================================================= *)
+(*  .ting LANGUAGE GRAMMAR                                           *)
+(*                                                                   *)
+(*  EBNF describing the PARSER's view: the input is the stream of    *)
+(*  tokens produced by the lexer (whitespace and | comments | are    *)
+(*  already stripped, so they never appear below).                   *)
+(*                                                                   *)
+(*  Notation:                                                        *)
+(*    ::=    is defined as            |     alternative              *)
+(*    ( )    grouping                 ?     zero or one              *)
+(*    *      zero or more             +     one or more              *)
+(*    "x"    a literal keyword/symbol token                          *)
+(*    NAME   a token class from the lexer (UPPERCASE)                *)
+(* ================================================================= *)
+
+
+(* ---------- Program ---------- *)
+
+<program>     ::= <top_level>*
+<top_level>   ::= <func_def> | <statement>
+
+
+(* ---------- Functions ---------- *)
+
+<func_def>    ::= <ret_type> IDENTIFIER ( "with" "[" <params> "]" )? "start" ":" <statement>* "end"
+<params>      ::= ( <param> ( "," <param> )* )?
+<param>       ::= IDENTIFIER "as" <type> ( "=" <expr> )?
+
+<ret_type>    ::= "void" | <type>
+
+
+(* ---------- Types ---------- *)
+
+<type>   ::= <scalar> <list_suffix>*
+<scalar>      ::= "int" | "float" | "char" | "string" | "bool"
+<list_suffix> ::= "list"
+
+
+(* ---------- Statements ---------- *)
+
+<statement>   ::= <var_decl>
+                | <assign>
+                | <if>
+                | <while>
+                | <repeat>
+                | <repeat_on>
+                | <say>
+                | <return>
+                | "stop" "\n"
+                | "skip" "\n"
+                | <call> "\n"
+
+<var_decl>    ::= "create" IDENTIFIER "as" <type> ( "=" <expr> )? "\n"
+<assign>      ::= <lvalue> <assign_op> <expr> "\n"
+<say>         ::= "say" <expr> "\n"
+<return>      ::= "return" <expr>? "\n"
+
+<lvalue>      ::= IDENTIFIER ( "[" <expr> "]" )?
+<assign_op>   ::= "=" | "+=" | "-=" | "*=" | "/=" | "%="
+
+
+(* ---------- Control flow ---------- *)
+(* "else (cond) start: ... " behaves as an else-if; "else start: ..." with    *)
+(* no condition is a plain else, and must be last. Both share the if's "end". *)
+
+<if>          ::= "if" "(" <bool> ")" "start" ":" <statement>*
+                  <else_branch>*
+                  "end"
+<else_branch> ::= "else" ( "(" <bool> ")" )? "start" ":" <statement>*
+
+<while>       ::= "while" "(" <bool> ")" "start" ":" <statement>* "end"
+
+<repeat>      ::= "repeat" "(" IDENTIFIER "," <expr> "to" <expr> ( "," "step" <expr> )? ")" "start" ":" <statement>* "end"
+
+<repeat_on>   ::= "repeat" "on" "(" IDENTIFIER "in" IDENTIFIER ")" "start" ":" <statement>* "end"
+
+
+(* ---------- Boolean expressions ---------- *)
+(* "not" is a general prefix operator (logical NOT), applicable to any        *)
+(* boolean expression. Precedence: not > and > or.                            *)
+
+<bool>        ::= "not" <bool>
+                | <or>
+<or>          ::= <and> ( "or" <and> )*
+<and>         ::= <cmp> ( "and" <cmp> )*
+<cmp>         ::= "(" <bool> ")"
+                | <expr> <cmp_op> <expr>
+<cmp_op>      ::= "is" | "more" "than" | "less" "than"
+
+
+(* ---------- Arithmetic expressions ---------- *)
+
+<expr>        ::= <term> ( ( "+" | "-" ) <term> )*
+<term>        ::= <factor> ( ( "*" | "/" | "%" ) <factor> )*
+<factor>      ::= "-" <factor>
+                | <atom>
+<atom>        ::= <call>
+                | IDENTIFIER "[" <expr> "]"
+                | IDENTIFIER
+                | <literal>
+                | "(" <expr> ")"
+
+<call>        ::= IDENTIFIER "(" <args> ")"
+<args>        ::= ( <expr> ( "," <expr> )* )?
+
+
+(* ---------- Literals ---------- *)
+
+<literal>     ::= INT_LITERAL
+                | FLOAT_LITERAL
+                | STRING_LITERAL
+                | CHAR_LITERAL
+                | "true" | "false"
+                | <list_literal>
+<list_literal>::= "[" ( <expr> ( "," <expr> )* )? "]"
+
+
+(* ================================================================== *)
+(*  Token classes (defined by the lexer; shown here as reference).    *)
+(*                                                                    *)
+(*    IDENTIFIER     letter or '_', then letters/digits/'_'           *)
+(*    INT_LITERAL    one or more digits                               *)
+(*    FLOAT_LITERAL  digits '.' (digits)?                             *)
+(*    STRING_LITERAL "..." or '...'  with 2+ chars  (lexer rule)      *)
+(*    CHAR_LITERAL   "x" or 'x'      with 0-1 chars (lexer rule)      *)
+(*                                                                    *)
+(*  ('...' and "..." are interchangeable in source; the lexer chooses *)
+(*   STRING vs CHAR by length, not by which quote was used.)          *)
+(* ================================================================== *)
+
+
+(* ============================================================= *)
+(* Built-in functions (handled in codegen)                       *)
+(* These look like regular calls but are reserved names.         *)
+(*                                                               *)
+(*   input()            — read input, type inferred from context *)
+(*   random(min, max)   — random int in range                    *)
+(*   length(x)          — length of list or string               *)
+(*   add(list, val)     — add value to end of list               *)
+(*   remove(list, idx)  — remove value at index                  *)
+(*   to_int(x)          — cast to int                            *)
+(*   to_float(x)        — cast to float                          *)
+(*   to_char(x)         — cast to char                           *)
+(*   to_string(x)       — cast to string                         *)
+(* ============================================================= *)

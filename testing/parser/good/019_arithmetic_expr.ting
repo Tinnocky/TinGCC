@@ -1,0 +1,7 @@
+say 1 + 2
+say 1 - 2
+say 2 * 3
+say 8 / 2
+say 9 % 2
+say 1 + 2 * 3
+say (1 + 2) * 3

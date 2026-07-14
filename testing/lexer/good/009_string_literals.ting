@@ -1,0 +1,10 @@
+"ab"
+'cd'
+"Hello, World!"
+"Hello 123"
+"Hello\tWorld"
+"Hello\nWorld"
+"\""
+"\\"
+"multi line
+string"

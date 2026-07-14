@@ -1,0 +1,19 @@
+PROGRAM_NODE (line 0)
+├─ CREATE_VAR_NODE (line 1)
+│  ├─ name: 'x'
+│  ├─ type: TYPE_INT
+│  └─ value:
+│     └─ LITERAL_NODE (line 1)
+│        └─ TYPE_INT '5'
+├─ CREATE_VAR_NODE (line 2)
+│  ├─ name: 'name'
+│  ├─ type: TYPE_STRING
+│  └─ value:
+│     └─ LITERAL_NODE (line 2)
+│        └─ TYPE_STRING 'hello'
+└─ CREATE_VAR_NODE (line 3)
+   ├─ name: 'flag'
+   ├─ type: TYPE_BOOL
+   └─ value:
+      └─ LITERAL_NODE (line 3)
+         └─ TYPE_BOOL 'true'

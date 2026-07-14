@@ -1,0 +1,4 @@
+say -5
+say --5
+if (not x is 5) start:
+end
