@@ -57,17 +57,35 @@ static TypeInfo *analyze_index(Context *context, ASTNode *node); //* complete!!!
 static TypeInfo *analyze_literal(Context *context, ASTNode *node); //* complete!!!
 static TypeInfo *analyze_list_literal(Context *context, ASTNode *node); //* complete!!!
 
+/* ----- Builtin functions ----- */
+static TypeInfo *analyze_input_call(Context *context, ASTNode *node);
+static TypeInfo *analyze_random_call(Context *context, ASTNode *node);
+static TypeInfo *analyze_length_call(Context *context, ASTNode *node);
+static TypeInfo *analyze_add_call(Context *context, ASTNode *node);
+static TypeInfo *analyze_remove_call(Context *context, ASTNode *node);
+static TypeInfo *analyze_to_int_call(Context *context, ASTNode *node);
+static TypeInfo *analyze_to_float_call(Context *context, ASTNode *node);
+static TypeInfo *analyze_to_char_call(Context *context, ASTNode *node);
+static TypeInfo *analyze_to_string_call(Context *context, ASTNode *node);
+
 /* ---- Inner semantics functions ----- */
 static void analyze_body(Context *context, LinkedASTNode *linked_node); //* complete!!!
 static void expect_bool_condition(Context *context, ASTNode *condition, int line); //* complete!!!
 static inline bool is_type_numeric(Type type); //* complete!!!
 static bool types_match(TypeInfo *type_info1, TypeInfo *type_info2); //* complete!!!
 static bool is_built_in(char *name); //* complete!!!
+static ASTNode *get_arg(LinkedASTNode *args, unsigned int index);
 
 
 // variable declarations
 #define HASH_SEED 5381
 #define HASH_MULTIPLIER 31
+
+char *builtin_names[] = { // names of built in functions
+    "input", "random",
+    "length", "add", "remove",
+    "to_int", "to_float", "to_char", "to_string",
+};
 
 
 /* ----- ParamInfo "Methods" ----- */
@@ -319,6 +337,7 @@ void run_analysis(Context *context, ASTNode *ast_root){
 }
 
 // check all functions are declared only once
+// check they arent named like one of the builtin functions
 // register all top level functions to the global context scope
 // Note: all other semantic checks for functions are done in analyze_function
 static void register_functions(Context *context, LinkedASTNode *statements_head){
@@ -326,8 +345,16 @@ static void register_functions(Context *context, LinkedASTNode *statements_head)
 
     while (curr_statement != NULL){
         if (curr_statement->node->node_type == FUNCTION_NODE){
+            // check if its the name of a builtin
+            if (is_built_in(curr_statement->node->data.function.name)){
+                print_error(
+                    "Analysis (line %d): Cannot name a function '%s' as it is a built-in function. \n",
+                    curr_statement->node->line, curr_statement->node->data.function.name
+                );
+            }
+
             // check if function was already declared
-            Symbol *function = table_lookup(context, context->current_scope->table);
+            Symbol *function = table_lookup(context->current_scope->table, curr_statement->node->data.function.name);
 
             if (function != NULL){
                 print_error("Analysis (line %d): Two or more functions cannot have the same name. \n", curr_statement->node->line);
@@ -432,35 +459,84 @@ static TypeInfo *analyze_expression(Context *context, ASTNode *expression){
 }
 
 // checks if the function is a builtin
-// checks if the right arguments were passed
+// checks if the right arguments were passed, basically redirect to the specific functions
 static TypeInfo *analyze_builtin(Context *context, ASTNode *node){
+    char *function_name = node->data.function_call.name;
 
+    if (strcmp(function_name, "input") == 0){
+        return analyze_builtin(context, node);
+    }
+    if (strcmp(function_name, "random") == 0){
+        return analyze_random_call(context, node);
+    }
+    if (strcmp(function_name, "length") == 0){
+        return analyze_length_call(context, node);
+    }
+    if (strcmp(function_name, "add") == 0){
+        return analyze_add_call(context, node);
+    }
+    if (strcmp(function_name, "remove") == 0){
+        return analyze_remove_call(context, node);
+    }
+    if (strcmp(function_name, "to_int") == 0){
+        return analyze_to_int_call(context, node);
+    }
+    if (strcmp(function_name, "to_float") == 0){
+        return analyze_to_float_call(context, node);
+    }
+    if (strcmp(function_name, "to_char") == 0){
+        return analyze_to_char_call(context, node);
+    }
+    if (strcmp(function_name, "to_string") == 0){
+        return analyze_to_string_call(context, node);
+    }
+
+    // shouldnt get here since analyze_builtin is only called when function is known to be a builtin
+    print_error("");
 }
 
 
 /* ----- Statement analysis functions ----- */
-// TODO: check for functions with names of built-in functions since they shouldnt take their name
-// TODO: check default parameters appear only after all non-default parameters
+// check default parameters appear only after all non-default parameters
 // go over the body and check all paths return the expected return type
 static void analyze_function(Context *context, ASTNode *node){
+    LinkedASTNode *params = node->data.function.params;
+    
+    bool is_defaults = false; // seen a default param, from now on only default params should appear
+    while (params != NULL){
+        if (!is_defaults && params->node->data.function_param.default_val != NULL){
+            is_defaults = true;
+        }
 
+        if (is_defaults && params->node->data.function_param.default_val == NULL){
+            print_error(
+                "Analysis (line %d): Non-default parameter cannot appear after a default parameter in function '%s'. \n",
+                node->line, node->data.function.name
+            );
+        }
+
+        params = params->next;
+    }
 
     context->current_return_type_info = node->data.function.return_type_info;
     push_scope(context);
 
     // save parameters in scope
-    LinkedASTNode *params = node->data.function.params;
+    params = node->data.function.params;
+
     while (params != NULL){
         Symbol *new_parameter = init_symbol_var(
             params->node->data.function_param.name,
             params->node->data.function_param.type_info,
             params->node->line
         );
+        new_parameter->data.var.is_initialized = true;
+        scope_add(context, new_parameter);
 
         params = params->next;
     }
 
-    analyze_body(context, node->data.function.body); //? how do we check return types.... huuhhuu..
+    analyze_body(context, node->data.function.body); // TODO: check the return types (hard, lets try doing this at last)
 
     pop_scope(context);
     context->current_return_type_info = NULL;
@@ -885,7 +961,167 @@ static TypeInfo *analyze_list_literal(Context *context, ASTNode *node){
 }
 
 
-/* ---- Inner semantics functions ----- */
+/* ----- Builtin functions ----- */
+// input()
+static TypeInfo *analyze_input_call(Context *context, ASTNode *node){
+    // type is inferred from context - set to void for now, codegen handles it
+    node->type_info = init_type_info(TYPE_VOID);
+    return node->type_info;
+}
+
+// random(int min, int max)
+static TypeInfo *analyze_random_call(Context *context, ASTNode *node){
+    LinkedASTNode *args = node->data.function_call.params;
+
+    if (get_arg(args, 0) == NULL || get_arg(args, 1) == NULL){
+        print_error("Analysis (line %d): random() requires 2 arguments. \n", node->line);
+    }
+
+    TypeInfo *min_type_info = analyze_expression(context, get_arg(args, 0));
+    TypeInfo *max_type_info = analyze_expression(context, get_arg(args, 1));
+
+    if (min_type_info->type != TYPE_INT || max_type_info->type != TYPE_INT){
+        print_error("Analysis (line %d): random() arguments must be integers. \n", node->line);
+    }
+
+    node->type_info = init_type_info(TYPE_INT);
+    return node->type_info;
+}
+
+// length(list or string x)
+static TypeInfo *analyze_length_call(Context *context, ASTNode *node){
+    LinkedASTNode *args = node->data.function_call.params;
+
+    if (get_arg(args, 0) == NULL){
+        print_error("Analysis (line %d): length() requires 1 argument. \n", node->line);
+    }
+
+    TypeInfo *arg_type_info = analyze_expression(context, get_arg(args, 0));
+
+    if (arg_type_info->type != TYPE_LIST && arg_type_info->type != TYPE_STRING){
+        print_error("Analysis (line %d): length() argument must be a list or string. \n", node->line);
+    }
+
+    node->type_info = init_type_info(TYPE_INT);
+    return node->type_info;
+}
+
+// add(list, list->inner val)
+static TypeInfo *analyze_add_call(Context *context, ASTNode *node){
+    LinkedASTNode *args = node->data.function_call.params;
+
+    if (get_arg(args, 0) == NULL || get_arg(args, 1) == NULL){
+        print_error("Analysis (line %d): add() requires 2 arguments. \n", node->line);
+    }
+
+    TypeInfo *list_type_info = analyze_expression(context, get_arg(args, 0));
+    TypeInfo *val_type_info = analyze_expression(context, get_arg(args, 1));
+
+    if (list_type_info->type != TYPE_LIST){
+        print_error("Analysis (line %d): add() first argument must be a list. \n", node->line);
+    }
+
+    if (!types_match(list_type_info->inner, val_type_info)){
+        print_error("Analysis (line %d): add() value type does not match list element type. \n", node->line);
+    }
+
+    node->type_info = init_type_info(TYPE_VOID);
+    return node->type_info;
+}
+
+// remove(list, int index)
+static TypeInfo *analyze_remove_call(Context *context, ASTNode *node){
+    LinkedASTNode *args = node->data.function_call.params;
+
+    if (get_arg(args, 0) == NULL || get_arg(args, 1) == NULL){
+        print_error("Analysis (line %d): remove() requires 2 arguments. \n", node->line);
+    }
+
+    TypeInfo *list_type_info = analyze_expression(context, get_arg(args, 0));
+    TypeInfo *index_type_info = analyze_expression(context, get_arg(args, 1));
+
+    if (list_type_info->type != TYPE_LIST){
+        print_error("Analysis (line %d): remove() first argument must be a list. \n", node->line);
+    }
+
+    if (index_type_info->type != TYPE_INT){
+        print_error("Analysis (line %d): remove() index must be an integer. \n", node->line);
+    }
+
+    node->type_info = init_type_info(TYPE_VOID);
+    return node->type_info;
+}
+
+// to_int(x)
+static TypeInfo *analyze_to_int_call(Context *context, ASTNode *node){
+    LinkedASTNode *args = node->data.function_call.params;
+
+    if (get_arg(args, 0) == NULL){
+        print_error("Analysis (line %d): to_int() requires 1 argument. \n", node->line);
+    }
+
+    TypeInfo *arg_type_info = analyze_expression(context, get_arg(args, 0));
+
+    if (!is_type_numeric(arg_type_info->type) && arg_type_info->type != TYPE_STRING){
+        print_error("Analysis (line %d): to_int() argument must be numeric or string. \n", node->line);
+    }
+
+    node->type_info = init_type_info(TYPE_INT);
+    return node->type_info;
+}
+
+// to_float(x)
+static TypeInfo *analyze_to_float_call(Context *context, ASTNode *node){
+    LinkedASTNode *args = node->data.function_call.params;
+
+    if (get_arg(args, 0) == NULL){
+        print_error("Analysis (line %d): to_float() requires 1 argument. \n", node->line);
+    }
+
+    TypeInfo *arg_type_info = analyze_expression(context, get_arg(args, 0));
+
+    if (!is_type_numeric(arg_type_info->type) && arg_type_info->type != TYPE_STRING){
+        print_error("Analysis (line %d): to_float() argument must be numeric or string. \n", node->line);
+    }
+
+    node->type_info = init_type_info(TYPE_FLOAT);
+    return node->type_info;
+}
+
+// to_char(x)
+static TypeInfo *analyze_to_char_call(Context *context, ASTNode *node){
+    LinkedASTNode *args = node->data.function_call.params;
+
+    if (get_arg(args, 0) == NULL){
+        print_error("Analysis (line %d): to_char() requires 1 argument. \n", node->line);
+    }
+
+    TypeInfo *arg_type_info = analyze_expression(context, get_arg(args, 0));
+
+    if (arg_type_info->type != TYPE_INT && arg_type_info->type != TYPE_STRING){
+        print_error("Analysis (line %d): to_char() argument must be int or string. \n", node->line);
+    }
+
+    node->type_info = init_type_info(TYPE_CHAR);
+    return node->type_info;
+}
+
+// to_string(x)
+static TypeInfo *analyze_to_string_call(Context *context, ASTNode *node){
+    LinkedASTNode *args = node->data.function_call.params;
+
+    if (get_arg(args, 0) == NULL){
+        print_error("Analysis (line %d): to_string() requires 1 argument. \n", node->line);
+    }
+
+    analyze_expression(context, get_arg(args, 0)); // any type is fine
+
+    node->type_info = init_type_info(TYPE_STRING);
+    return node->type_info;
+}
+
+
+/* ----- Inner semantics functions ----- */
 static void analyze_body(Context *context, LinkedASTNode *linked_node){
     while (linked_node != NULL){
         analyze_statement(context, linked_node->node);
@@ -929,15 +1165,31 @@ static bool types_match(TypeInfo *type_info1, TypeInfo *type_info2){
 
 // check if a function with that name is one of the built-in functions
 static bool is_built_in(char *name){
-    return (
-        strcmp(name, "length")    == 0 ||
-        strcmp(name, "add")       == 0 ||
-        strcmp(name, "remove")    == 0 ||
-        strcmp(name, "random")    == 0 ||
-        strcmp(name, "input")     == 0 ||
-        strcmp(name, "to_int")    == 0 ||
-        strcmp(name, "to_float")  == 0 ||
-        strcmp(name, "to_string") == 0 ||
-        strcmp(name, "to_char")   == 0
-    );
+    int builtin_index = 0;
+
+    while (builtin_names[builtin_index] != NULL){
+        if (strcmp(builtin_names[builtin_index], name) == 0){
+            return true;
+        }
+
+        builtin_index++;
+    }
+    return false;
+}
+
+
+// get the arg in the passed index. used for builtin functions.
+static ASTNode *get_arg(LinkedASTNode *args, unsigned int index){
+    unsigned int counter = 0;
+
+    while (args != NULL){
+        if (counter == index){
+            return args->node;
+        }
+
+        counter++;
+        args = args->next;
+    }
+
+    return NULL;
 }
