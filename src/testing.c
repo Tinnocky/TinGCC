@@ -324,7 +324,7 @@ static void print_ast_node(ASTNode *node, const char *prefix, bool is_last) {
 
         case SAY_NODE:
             printf("%s└─ value:\n", child_prefix);
-            print_linked_ast(node->data.say.values, label_end, true);
+            print_linked_list(node->data.say.values, label_end);
             break;
 
         case RETURN_NODE:

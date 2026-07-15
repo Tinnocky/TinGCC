@@ -58,9 +58,6 @@ static ASTNode *parse_list_literal(Parser *parser);
 static TypeInfo *parse_type(Parser *parser, bool is_function);
 static char *parse_identifier(Parser *parser);
 
-/* ----- helper functions ----- */
-static void append_chunk_of_string(char *value, LinkedASTNode **head, LinkedASTNode **tail, NodeType type, int line);
-
 
 // variable declarations
 #define PROGRAM_NODE_LINE 0
@@ -717,95 +714,32 @@ static ASTNode *parse_say(Parser *parser){
     LinkedASTNode *values_head = NULL;
     LinkedASTNode *values_tail = NULL;
 
-    if (current_type(parser) == STRING_LITERAL_TOKEN){
-        char *str = current_string(parser);
+    // first part: either a string chunk, or a plain expression (say x + 1)
+    ASTNode *first = parse_expression(parser);
+    values_head = init_linked_ast(first);
+    values_tail = values_head;
 
-        // go over the string and save each part (alternating string/identifier)
-        char *current_part_head = malloc(strlen(str) + 1); // +1 for the null terminator
-        check_nullptr(current_part_head, "Parser: malloc for say string buffer failed. \n");
-        char *current_part_tail = current_part_head;
-        bool is_inside_brackets = false;
+    // if the lexer split an interpolated string, we now see [ expr ] "next chunk" pairs
+    while (current_type(parser) == OPEN_BRACKET_TOKEN){
+        advance(parser); // consume [
 
-        while (*str != '\0'){
-            // start of reading an interpolated variable
-            if (*str == '['){ 
-                is_inside_brackets = true;
-
-                if (current_part_tail != current_part_head){ // only if theres even something to save
-                    *current_part_tail = '\0';
-
-                    append_chunk_of_string(
-                        current_part_head,
-                        &values_head, &values_tail,
-                        LITERAL_NODE, 
-                        current_line(parser)
-                    );
-
-                    current_part_tail = current_part_head; // reset
-                }
-            }
-
-            // end of reading an interpolated variable
-            else if (*str == ']'){
-                if (!is_inside_brackets){ // cant just ] without having a [ before
-                    print_error("Parser (line %d): Unexpected ']' in say string. \n", current_line(parser));
-                }
-                
-                is_inside_brackets = false;
-
-                *current_part_tail = '\0';
-
-                append_chunk_of_string(
-                    current_part_head,
-                    &values_head, &values_tail,
-                    IDENTIFIER_NODE, 
-                    current_line(parser)
-                );
-
-                current_part_tail = current_part_head; // reset
-            }
-
-            // could be a character in the string or part of an identifier, doesnt matter
-            else {
-                *current_part_tail = *str;
-                current_part_tail++;
-            }
-
-            str++;
-        }
-
-        // error if we were inside brackets while string ended
-        if (is_inside_brackets){
-            print_error("Parser (line %d): Unterminated '[' in say string. \n", current_line(parser));
-        }
-
-        // save whats left in the current_part
-        if (current_part_tail != current_part_head){
-            *current_part_tail = '\0';
-
-            // only happens when it doesnt end on an identifier
-            append_chunk_of_string(
-                current_part_head,
-                &values_head, &values_tail,
-                LITERAL_NODE, 
-                current_line(parser)
-            );
-        }
-
-        // finally finished this process...
-        free(current_part_head);
-        advance(parser);
-        new_node->data.say.values = values_head;
-    }
-
-
-    // not even a string expression
-    else {
         ASTNode *expr = parse_expression(parser);
-        values_head = init_linked_ast(expr);
-        new_node->data.say.values = values_head;
+        LinkedASTNode *linked_expr = init_linked_ast(expr);
+        values_tail->next = linked_expr;
+        values_tail = linked_expr;
+
+        expect_must(parser, CLOSE_BRACKET_TOKEN);
+
+        // the lexer always emits a string chunk after ], even if empty
+        if (current_type(parser) == STRING_LITERAL_TOKEN){
+            ASTNode *chunk = parse_expression(parser); // resolves to a LITERAL_NODE
+            LinkedASTNode *linked_chunk = init_linked_ast(chunk);
+            values_tail->next = linked_chunk;
+            values_tail = linked_chunk;
+        }
     }
 
+    new_node->data.say.values = values_head;
     expect_must_statement_end(parser);
     return new_node;
 }
@@ -1261,32 +1195,4 @@ static char *parse_identifier(Parser *parser){
     expect_must(parser, IDENTIFIER_TOKEN); 
 
     return name;
-}
-
-
-/* ----- helper functions ----- */
-static void append_chunk_of_string(char *value, LinkedASTNode **head, LinkedASTNode **tail, NodeType type, int line){
-    ASTNode *node = init_ast_node(type, line);
-
-    if (type == LITERAL_NODE){
-        node->data.literal.type = TYPE_STRING;
-        node->data.literal.value = strdup(value);
-        check_nullptr(node->data.literal.value, "Parser: strdup for say string chunk failed.\n");
-    }
-    else { // IDENTIFIER_NODE
-        node->data.identifier.name = strdup(value);
-        check_nullptr(node->data.identifier.name, "Parser: strdup for say identifier failed.\n");
-    }
-
-    // add it to the linked list
-    LinkedASTNode *linked = init_linked_ast(node);
-
-    if (*head == NULL){ 
-        *head = linked; 
-    } 
-    else {
-        (*tail)->next = linked;
-    }
-
-    *tail = linked;
 }

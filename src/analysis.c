@@ -85,6 +85,7 @@ char *builtin_names[] = { // names of built in functions
     "input", "random",
     "length", "add", "remove",
     "to_int", "to_float", "to_char", "to_string",
+    NULL
 };
 
 
@@ -464,7 +465,7 @@ static TypeInfo *analyze_builtin(Context *context, ASTNode *node){
     char *function_name = node->data.function_call.name;
 
     if (strcmp(function_name, "input") == 0){
-        return analyze_builtin(context, node);
+        return analyze_input_call(context, node);
     }
     if (strcmp(function_name, "random") == 0){
         return analyze_random_call(context, node);
@@ -561,10 +562,14 @@ static void analyze_create_var(Context *context, ASTNode *node){
         TypeInfo *value_type_info = analyze_expression(context, node->data.create_var.value);
 
         if (!types_match(value_type_info, node->data.create_var.type_info)){
-            print_error(
-                "Analysis (line %d): Cannot assign value of wrong type to variable '%s'. \n",
-                node->line, node->data.create_var.name
-            );
+            // error only if not: value_type = int, and variable_type = float
+            if (variable->data.var.type_info->type != TYPE_INT || value_type_info->type != TYPE_FLOAT){
+                print_error(
+                    "Analysis (line %d): Cannot assign value of wrong type to variable '%s'. \n",
+                    node->line, node->data.create_var.name
+                );
+            }
+
         }
     }
 
@@ -750,24 +755,13 @@ static void analyze_skip_stop(Context *context, ASTNode *node){
 }
 
 // checks if all expressions are valid
-// TODO: in order to have interpolated expressions (not just vars), we need to change everything...
-// TODO: ...all the way back to the lexer. so we will do it later, its not hard
 static void analyze_say(Context *context, ASTNode *node){
     LinkedASTNode *values = node->data.say.values;
 
     while (values != NULL){
         ASTNode *value = values->node;
 
-        if (value->node_type == LITERAL_NODE){ // regular string, no checks needed
-            values = values->next;
-            continue;
-        }
-
-        else if (value->node_type == IDENTIFIER_NODE){ // identifier must exist in scope
-            expect_symbol(context, value->data.identifier.name, SYMBOL_VAR, value->line);
-        }
-
-        else {
+        if (value->node_type != LITERAL_NODE){
             TypeInfo *value_type_info = analyze_expression(context, value);
 
             if (value_type_info->type == TYPE_VOID){

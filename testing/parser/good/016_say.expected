@@ -22,4 +22,3 @@ PROGRAM_NODE (line 0)
       └─ FUNCTION_CALL_NODE (line 4)
          ├─ name: 'hello'
          └─ args:
-         
