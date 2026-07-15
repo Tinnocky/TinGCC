@@ -730,7 +730,7 @@ static ASTNode *parse_say(Parser *parser){
 
         expect_must(parser, CLOSE_BRACKET_TOKEN);
 
-        // the lexer always emits a string chunk after ], even if empty
+        // the lexer may emit a string chunk after ] if there's content
         if (current_type(parser) == STRING_LITERAL_TOKEN){
             ASTNode *chunk = parse_expression(parser); // resolves to a LITERAL_NODE
             LinkedASTNode *linked_chunk = init_linked_ast(chunk);

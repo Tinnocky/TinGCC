@@ -4,16 +4,10 @@
 #include <stdbool.h>
 
 
-
 // forward declarations of types from lexer.h
 // this lets us not fully including lexer.h and evade circular includes
 typedef struct TokenNode TokenNode;
 typedef struct Lexer Lexer;
-
-
-// global variables
-extern TokenNode *global_tokens_head;
-extern Lexer *global_lexer;
 
 
 // public function declarations
@@ -23,7 +17,6 @@ void check_nullptr(const void* ptr, const char *format, ...);
 
 /* ----- all other ----- */
 void realloc_check(char **token_string, int *token_length, int *token_size);
-void global_cleanup(void);
 bool ends_with(const char *string, const char *suffix);
 
 

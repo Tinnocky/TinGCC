@@ -10,20 +10,19 @@
 static inline void advance(Lexer *lexer);
 
 /* ----- read characters ----- */
-static char *get_token_string(Lexer *lexer, int *token_length, int *token_size, bool *is_literal);
-static bool read_interp_string_continuation(Lexer *lexer, char **token_string, int *token_length, int *token_size);
+static char *get_token_string(Lexer *lexer, int *token_length, int *token_size, char *literal_quote);
 static void skip_unnecessary(Lexer *lexer);
-static bool read_string_literal(Lexer *lexer, char **token_string, int *token_length, int *token_size);
+static char read_string_literal(Lexer *lexer, char **token_string, int *token_length, int *token_size);
 static bool read_operator(Lexer *lexer, char *token_string, int *token_length);
 static bool read_word(Lexer *lexer, char **token_string, int *token_length, int *token_size);
 
 /* ----- make a token ----- */
-static Token *get_token(Lexer *lexer, const char *token_string, int token_length, bool is_literal);
-static TokenType determine_token_type(const char *token_string, const int token_length, bool is_literal);
+static Token *get_token(Lexer *lexer, const char *token_string, int token_length, char literal_quote);
+static TokenType determine_token_type(const char *token_string, const int token_length, char literal_quote);
 static TokenType determine_number_token_type(const char *token_string, const int token_length);
 
 
-// initialize importants stuff
+// variables...
 typedef struct { // struct containing a keyword and their enum TokenType companion
     char *string;
     TokenType type;
@@ -54,11 +53,19 @@ Keyword keywords[] = {
     {NULL, UNKNOWN_TOKEN}
 };
 
-Lexer *global_lexer = NULL;
-TokenNode *global_tokens_head = NULL;
-
 
 /* ----- TokenNode "methods" ----- */
+// initialize a new token node and add its token value
+static TokenNode *init_token_node(Token token){
+    TokenNode *new_token_node = malloc(sizeof(TokenNode));
+    check_nullptr(new_token_node, "Lexer: malloc to initialize TokenNode failed. \n");
+
+    new_token_node->token = token;
+    new_token_node->next = NULL;
+
+    return new_token_node;
+}
+
 // Note: the passed *tokens_node should be the head of the linked list.
 void free_tokens_list(TokenNode *token_node){
     while (token_node){
@@ -78,7 +85,6 @@ void free_tokens_list(TokenNode *token_node){
 Lexer *init_lexer(const char *filename){
     Lexer *lexer = malloc(sizeof(Lexer));
     check_nullptr(lexer, "Lexer: Malloc to initialize a lexer failed. \n");
-    global_lexer = lexer;
 
     lexer->file = fopen(filename, "r");
     check_nullptr(lexer->file, "Lexer: Could not open the provided file. \n");
@@ -86,7 +92,7 @@ Lexer *init_lexer(const char *filename){
     // initialize lexer fields
     lexer->line = 1;
     lexer->bracket_depth = 0;
-    lexer->inside_interp_string = false;
+    lexer->inside_interp_brackets = false;
     lexer->interp_quote_type = '\0';
     lexer->interp_bracket_depth = 0;
     advance(lexer); // get the first character
@@ -111,49 +117,55 @@ static inline void advance(Lexer *lexer){
 // returns the head of the tokens list
 TokenNode *run_lexer(Lexer *lexer){
     // create the tokens list
-    TokenNode *token_node = malloc(sizeof(TokenNode));
-    check_nullptr(token_node, "Lexer: malloc to initialize the first TokenNode failed. \n");
-    token_node->next = NULL;
-    TokenNode *tokens_head = token_node;
-    global_tokens_head = tokens_head;
+    TokenNode *tokens_head = NULL;
+    TokenNode *tokens_tail = NULL;
 
     // lexing loop!!!
     while (true){
         // 1. get the next string
         int token_size = INITIAL_TOKEN_LENGTH;
         int token_length = 0;
-        bool is_literal = false;
+        char literal_quote = '\0';
 
-        char *token_string = get_token_string(lexer, &token_length, &token_size, &is_literal);
+        char *token_string = get_token_string(lexer, &token_length, &token_size, &literal_quote);
 
         if (token_string == NULL){ // got EOF token
             break;
         }
 
         // 2. got full string, time to turn it to a token!
-        Token *current_token = get_token(lexer, token_string, token_length, is_literal);
+        Token *current_token = get_token(lexer, token_string, token_length, literal_quote);
         free(token_string); // dont need it anymore
 
         // 3. store token in tokens list here
-        token_node->token = *current_token;
+        TokenNode *new_token_node = init_token_node(*current_token);
+        if (tokens_head == NULL){
+            tokens_head = new_token_node;
+        }
+        else {
+            tokens_tail->next = new_token_node;
+        }
+        
+        tokens_tail = new_token_node;
         free(current_token); // dont need it anymore
-
-        // 4. malloc next node in the tokens list
-        TokenNode *next = malloc(sizeof(TokenNode));
-        check_nullptr(next, "Lexer (line %d): malloc to initialize a TokenNode failed. \n", lexer->line);
-        token_node->next = next;
-        next->next = NULL;
-    
-        token_node = next;
     }
 
     // add an EOF token to the end of the tokens list
-    // token_node points to the last token now
-    token_node->token.type = EOF_TOKEN;
-    token_node->token.line = lexer->line;
-    token_node->token.string = strdup("EOF");
-    check_nullptr(token_node->token.string, "Lexer: strdup for the EOF Token's string failed. \n");
-    token_node->token.length = 0;
+    Token eof_token;
+    eof_token.type = EOF_TOKEN;
+    eof_token.line = lexer->line;
+    eof_token.string = strdup("EOF");
+    check_nullptr(eof_token.string, "Lexer: strdup for the EOF Token's string failed. \n");
+    eof_token.length = 0;
+
+    TokenNode *eof_token_node = init_token_node(eof_token);
+
+    if (tokens_head == NULL){
+        tokens_head = eof_token_node;
+    }
+    else {
+        tokens_tail->next = eof_token_node;
+    }
 
     return tokens_head;
 }
@@ -162,22 +174,18 @@ TokenNode *run_lexer(Lexer *lexer){
 /* ----- read characters ----- */
 // get the next full token in file stream as a string
 // this function acts as the entry point and will redirect to a few other more focused functions
-static char *get_token_string(Lexer *lexer, int *token_length, int *token_size, bool *is_literal){   
+static char *get_token_string(Lexer *lexer, int *token_length, int *token_size, char *literal_quote){   
     char *token_string = malloc(*token_size * sizeof(char));
     check_nullptr(token_string, "Lexer: malloc for token_string failed.\n");
 
-    // 1. check if were resuming an interpolated string
-    if (lexer->inside_interp_string){
-        *is_literal = true;
-        bool result = read_interp_string_continuation(lexer, &token_string, token_length, token_size);
-        if (!result) return NULL;
-        return token_string;
+    // 1. skip whitespaces and comments
+    if (lexer->interp_quote_type == '\0' || lexer->inside_interp_brackets){ // only if not resuming a string
+        skip_unnecessary(lexer);
     }
 
-    // 2. skip whitespaces and comments
-    skip_unnecessary(lexer);
+    // 2. check for EOF
     if (lexer->current_char == EOF){
-        if (lexer->interp_quote_type != '\0'){
+        if (lexer->interp_quote_type != '\0'){ // EOF in the middle of a string...
             print_error("Lexer (line %d): unterminated interpolated string — missing ']' and closing quote. \n", lexer->line);
         }
 
@@ -186,8 +194,9 @@ static char *get_token_string(Lexer *lexer, int *token_length, int *token_size, 
     }
     
     // 3. check for a string or character literal
-    if (read_string_literal(lexer, &token_string, token_length, token_size)){
-        *is_literal = true;
+    char quote = read_string_literal(lexer, &token_string, token_length, token_size);
+    if (quote != '\0'){
+        *literal_quote = quote;
         return token_string;
     }
 
@@ -204,58 +213,6 @@ static char *get_token_string(Lexer *lexer, int *token_length, int *token_size, 
     free(token_string);
     print_error("Lexer (line %d): Unable to get string token. \n", lexer->line);
     return NULL;
-}
-
-static bool read_interp_string_continuation(Lexer *lexer, char **token_string, int *token_length, int *token_size){
-    while (lexer->current_char != lexer->interp_quote_type){
-        if (lexer->current_char == EOF){
-            print_error("Lexer (line %d): string left unterminated until EOF. \n", lexer->line);
-            return false;
-        }
-
-        if (lexer->current_char == '\n'){
-            lexer->line++;
-            advance(lexer);
-            continue;
-        }
-
-        if (lexer->current_char == '['){
-            (*token_string)[*token_length] = '\0';
-            lexer->inside_interp_string = false;
-            lexer->interp_bracket_depth = lexer->bracket_depth;
-            return true;
-        }
-
-        if (lexer->current_char == '\\'){
-            advance(lexer);
-            if (lexer->current_char == EOF){
-                print_error("Lexer (line %d): string left unterminated until EOF. \n", lexer->line);
-                return false;
-            }
-            switch (lexer->current_char){
-                case 'n': (*token_string)[(*token_length)++] = '\n'; break;
-                case 't': (*token_string)[(*token_length)++] = '\t'; break;
-                default:
-                    (*token_string)[(*token_length)++] = '\\';
-                    (*token_string)[(*token_length)++] = lexer->current_char;
-                    break;
-            }
-            realloc_check(token_string, token_length, token_size);
-            advance(lexer);
-            continue;
-        }
-
-        (*token_string)[(*token_length)++] = lexer->current_char;
-        realloc_check(token_string, token_length, token_size);
-        advance(lexer);
-    }
-
-    // hit the ending quote — string is done
-    advance(lexer);
-    (*token_string)[*token_length] = '\0';
-    lexer->inside_interp_string = false;
-    lexer->interp_quote_type = '\0';
-    return true;
 }
 
 // skip unnecessary stuff such as comments or whitespaces
@@ -298,79 +255,95 @@ static void skip_unnecessary(Lexer *lexer){
 }
 
 // reads the next token if its in between quotes (a string or character literal) into **token_string
-// returns bool for if it was a literal or not
+// returns the quote type
 // Note: the first check for \n is if for enter was pressed between the string, second is if "\n" was typed (then the string should format)
-static bool read_string_literal(Lexer *lexer, char **token_string, int *token_length, int *token_size){
-        if (lexer->current_char != '\'' && lexer->current_char != '\"'){
-            return false;
+static char read_string_literal(Lexer *lexer, char **token_string, int *token_length, int *token_size){
+    // first character has to be a quote or continuation of an interp string
+    if (lexer->interp_quote_type == '\0') {
+        if (lexer->current_char != '\'' &&
+            lexer->current_char != '"')
+            return '\0';
+
+        lexer->interp_quote_type = lexer->current_char;
+        advance(lexer);
+    }
+    else {
+        if (lexer->inside_interp_brackets)
+            return '\0';
+    }
+        
+    // gets characters until hits the ending quote or until its sent away by the interp string
+    while (lexer->current_char != lexer->interp_quote_type){
+        if (lexer->current_char == '\n'){ // increment line count without appending the newline token
+            lexer->line++;
+            advance(lexer);
+            continue; // shouldnt go to the next part
+        }
+        else if (lexer->current_char == EOF){
+            print_error("Lexer (line %d): string left unterminated until EOF. \n", lexer->line);
         }
 
-        char quote_type = lexer->current_char; // ending quote should be the same type.
-        advance(lexer); // skip starting qoute
-        
-        // gets characters until hits the ending quote
-        while (lexer->current_char != quote_type){
-            if (lexer->current_char == '\n'){ // increment line count without appending the newline token
-                lexer->line++;
-                advance(lexer);
-                continue; // shouldnt go to the next part
-            }
+        // opening of an interpolated expression.
+        // need to return the string we got until now and make sure on next run it will come back here 
+        else if (lexer->current_char == '[' && lexer->interp_quote_type == '"'){
+            (*token_string)[*token_length] = '\0';
 
-            else if (lexer->current_char == EOF){
-                print_error("Lexer (line %d): string left unterminated until EOF. \n", lexer->line);
-                return false;
-            }
+            lexer->inside_interp_brackets = true;
+            lexer->interp_bracket_depth = lexer->bracket_depth;
 
-            // getting an interpolated string
-            else if (lexer->current_char == '['){
-                (*token_string)[*token_length] = '\0';
-                lexer->interp_quote_type = quote_type;
-                lexer->inside_interp_string = false;
-                lexer->interp_bracket_depth = lexer->bracket_depth; // snapshot depth BEFORE this [ is counted
-                return true;
-            }
+            // only if there was actual string content before the interpolation
+            return (*token_length > 0) ? lexer->interp_quote_type : '\0';
+        }
 
-            // handling escape sequences written into the string
-            else if (lexer->current_char == '\\'){
-                advance(lexer);
-                
-                if (lexer->current_char == EOF){ // could appear 
+        // handling escape sequences written into the string
+        else if (lexer->current_char == '\\'){
+            advance(lexer);
+
+            switch (lexer->current_char){
+                case EOF:
                     print_error("Lexer (line %d): string left unterminated until EOF. \n", lexer->line);
-                    return false;
-                }
+                    return '\0';
 
-                switch (lexer->current_char){
-                    case 'n':
-                        (*token_string)[(*token_length)++] = '\n';
-                        break;
+                case 'n':
+                    (*token_string)[(*token_length)++] = '\n';
+                    break;
 
-                    case 't':
-                        (*token_string)[(*token_length)++] = '\t';
-                        break;
+                case 't':
+                    (*token_string)[(*token_length)++] = '\t';
+                    break;
 
-                    default: // unknown escape sequence, keep backslash and add next character
-                        (*token_string)[(*token_length)++] = '\\';
-                        (*token_string)[(*token_length)++] = lexer->current_char;
-                        break;
-                }
-
-                realloc_check(token_string, token_length, token_size);
-                advance(lexer);
-
-                continue; // shouldnt go to the next part
+                default: // unknown escape sequence, keep backslash and add next character
+                    (*token_string)[(*token_length)++] = '\\';
+                    realloc_check(token_string, token_length, token_size);
+                    (*token_string)[(*token_length)++] = lexer->current_char;
+                    break;
             }
-
-
-            (*token_string)[(*token_length)++] = lexer->current_char;
 
             realloc_check(token_string, token_length, token_size);
             advance(lexer);
+
+            continue; // shouldnt go to the next part
         }
 
-        advance(lexer); // skip ending quote
-        
-        (*token_string)[*token_length] = '\0';
-        return true;
+        // none of the above, add the character to string
+        (*token_string)[(*token_length)++] = lexer->current_char;
+
+        realloc_check(token_string, token_length, token_size);
+        advance(lexer);
+    }
+
+    advance(lexer); // skip ending quote
+    char quote_type = lexer->interp_quote_type;
+    lexer->interp_quote_type = '\0';    
+
+    (*token_string)[*token_length] = '\0';
+
+    // single quotes can only hold one character
+    if (quote_type == '\'' && *token_length > 1){
+        print_error("Lexer (line %d): Character literal cannot hold more than one character. \n", lexer->line);
+    }
+
+    return (*token_length > 0) ? quote_type : '\0';
 }
 
 // reads the next token operator into *token_string
@@ -389,10 +362,11 @@ static bool read_operator(Lexer *lexer, char *token_string, int *token_length){
             else {
                 lexer->bracket_depth--;
 
-                // resume string only if this ] brings us back to the depth where interpolation started
-                if (c == ']' && lexer->interp_quote_type != '\0' && !lexer->inside_interp_string &&
-                    lexer->bracket_depth == lexer->interp_bracket_depth){
-                    lexer->inside_interp_string = true;
+                // if this is inside an interpolated string, 
+                // check if this ] means we need to go back to lexing the string 
+                if (lexer->interp_quote_type != '\0' && lexer->inside_interp_brackets &&
+                    c == ']' && lexer->bracket_depth == lexer->interp_bracket_depth){
+                        lexer->inside_interp_brackets = false;
                 }
             }
 
@@ -504,12 +478,12 @@ static bool read_word(Lexer *lexer, char **token_string, int *token_length, int 
 /* ----- make a token ----- */
 // turn the given string into a full Token
 // add all fields and figure out what token type does it represent
-static Token *get_token(Lexer *lexer, const char *token_string, int token_length, bool is_literal){
+static Token *get_token(Lexer *lexer, const char *token_string, int token_length, char literal_quote){
     Token *token = malloc(sizeof(Token));
     check_nullptr(token, "Lexer (line %d): Malloc to initialize a token failed. \n", lexer->line);
 
     // find the token type
-    token->type = determine_token_type(token_string, token_length, is_literal);
+    token->type = determine_token_type(token_string, token_length, literal_quote);
 
     if (token->type == UNKNOWN_TOKEN){
         print_error("Lexer (line %d): Token '%s' is not a viable token. \n", lexer->line, token_string);
@@ -527,18 +501,13 @@ static Token *get_token(Lexer *lexer, const char *token_string, int token_length
 
 // goes through each keyword and token type in Keywords[] and determines what type our token is
 // determines in different ways other than iterating Keywords[] too
-static TokenType determine_token_type(const char *token_string, const int token_length, bool is_literal){
-    // check if its a string
-    if (is_literal){
-        // TODO: decide later if all literal lengthed <= 1 should automatically 
-        // TODO: be set to CHAR_LITERAL or i should find a different method to do this
-        if (token_length <= 1){
-            return CHAR_LITERAL_TOKEN;
-        }
-
-        else {
-            return STRING_LITERAL_TOKEN;
-        }
+static TokenType determine_token_type(const char *token_string, const int token_length, char literal_quote){
+    // check if its a string or char
+    if (literal_quote == '\''){
+        return CHAR_LITERAL_TOKEN;
+    }
+    if (literal_quote == '"'){
+        return STRING_LITERAL_TOKEN;
     }
 
     // check if the token is in Keywords[]

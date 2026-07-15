@@ -8,6 +8,7 @@
 // private function declarations
 static void arguments_check(int argc, char *argv[]);
 static void run_lexer_test(char *filename);
+static void run_parser_test(char *filename);
 
 
 // check if arguments passed are correct and if the file passed is a .ting file
@@ -27,6 +28,9 @@ static void run_lexer_test(char *filename){
     TokenNode *tokens_head = run_lexer(lexer);
 
     print_tokens_list(tokens_head);
+
+    free_tokens_list(tokens_head);
+    close_lexer(lexer);
 }
 
 static void run_parser_test(char *filename){
@@ -36,17 +40,21 @@ static void run_parser_test(char *filename){
     ASTNode *ast_root = run_parser(parser);
 
     print_ast(ast_root);
+
+    free_ast(ast_root);
+    close_parser(parser);
+    free_tokens_list(tokens_head);
+    close_lexer(lexer);
 }
 
 int main(int argc, char *argv[]){
-    atexit(global_cleanup); // register the cleanup function to run at program end
     arguments_check(argc, argv);
     
     char *filename = argv[1];
 
     // which test to run...
     // run_lexer_test(filename);
-    run_parser_test(filename);
+    // run_parser_test(filename);
 
     return 0;
 }

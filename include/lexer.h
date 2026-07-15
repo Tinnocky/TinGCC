@@ -112,7 +112,8 @@ struct Lexer {
     int line;
     int current_char; // character from the file stream the lexer currently holds. is an int because it might hold EOF
     int bracket_depth; // if we are inside an unclosed bracket
-    bool inside_interp_string; // if we were inside an interpolated string, we need to come back to collect it
+    // for interpolated strings...
+    bool inside_interp_brackets; // if we were inside an interpolated string, we need to come back to collect it
     char interp_quote_type; // to know what ends the string
     int interp_bracket_depth; // bracket_depth value when interpolation [ was opened
 };
@@ -126,7 +127,6 @@ void free_tokens_list(TokenNode *token_node);
 Lexer *init_lexer(const char *filename);
 void close_lexer(Lexer *lexer);
 TokenNode *run_lexer(Lexer *lexer);
-
 
 
 #endif

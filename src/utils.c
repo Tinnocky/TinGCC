@@ -3,7 +3,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include "../include/utils.h"
-#include "../include/lexer.h" // only for free_tokens_list, close_lexer
+#include "../include/lexer.h"
 
 
 // private function declarations
@@ -53,22 +53,6 @@ void realloc_check(char **token_string, int *token_length, int *token_size){
         check_nullptr(*token_string, "Realloc for a token string failed. \n");
     }
 }
-
-
-// cleans the program by freeing everything before exit. runs on program end
-// TODO: add parser stuff to here
-void global_cleanup(void){
-    // free the tokens_list
-    if (global_tokens_head != NULL){
-        free_tokens_list(global_tokens_head);
-    }
-
-    // free the lexer
-    if (global_lexer != NULL){
-        close_lexer(global_lexer);
-    }
-}
-
 
 // checks if the passed string ends with the passed suffix
 // had to make this myself cuz theres no library that does this
