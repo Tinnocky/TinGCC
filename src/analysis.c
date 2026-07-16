@@ -218,8 +218,7 @@ static unsigned int hash(char *name){
     unsigned int result = HASH_SEED;
 
     while ((*name_dup) != '\0'){
-        unsigned int counter = name_dup - name; // index
-        result += ((*name_dup) ^ counter) * HASH_MULTIPLIER;
+        result = result * HASH_MULTIPLIER + (*name_dup);
 
         name_dup++;
     }
@@ -493,7 +492,7 @@ static TypeInfo *analyze_builtin(Context *context, ASTNode *node){
     }
 
     // shouldnt get here since analyze_builtin is only called when function is known to be a builtin
-    print_error("");
+    print_error("Analysis (line %d): unhandled builtin function. \n", node->line);
 }
 
 
@@ -526,12 +525,19 @@ static void analyze_function(Context *context, ASTNode *node){
     params = node->data.function.params;
 
     while (params != NULL){
+        char *param_name = params->node->data.function_param.name;
+        Symbol *parameter = table_lookup(context->current_scope->table, param_name);
+        if (parameter != NULL){
+            print_error("Analysis (line %d): '%s' is already declared in this scope. \n", node->line, param_name);
+        }
+
         Symbol *new_parameter = init_symbol_var(
-            params->node->data.function_param.name,
+            param_name,
             params->node->data.function_param.type_info,
             params->node->line
         );
         new_parameter->data.var.is_initialized = true;
+
         scope_add(context, new_parameter);
 
         params = params->next;
@@ -563,7 +569,7 @@ static void analyze_create_var(Context *context, ASTNode *node){
 
         if (!types_match(value_type_info, node->data.create_var.type_info)){
             // error only if not: value_type = int, and variable_type = float
-            if (variable->data.var.type_info->type != TYPE_INT || value_type_info->type != TYPE_FLOAT){
+            if (node->data.create_var.type_info->type != TYPE_FLOAT || value_type_info->type != TYPE_INT){
                 print_error(
                     "Analysis (line %d): Cannot assign value of wrong type to variable '%s'. \n",
                     node->line, node->data.create_var.name
@@ -689,6 +695,7 @@ static void analyze_repeat(Context *context, ASTNode *node){
         init_type_info(TYPE_INT), 
         node->line
     );
+    loop_variable->data.var.is_initialized = true;
     scope_add(context, loop_variable);
 
     analyze_body(context, node->data.repeat.body);
@@ -716,6 +723,7 @@ static void analyze_repeat_on(Context *context, ASTNode *node){
         list->data.var.type_info->inner,
         node->line
     );
+    loop_variable->data.var.is_initialized = true;
     scope_add(context, loop_variable);
 
     analyze_body(context, node->data.repeat_on.body);
@@ -1128,16 +1136,16 @@ static void expect_bool_condition(Context *context, ASTNode *condition, int line
     TypeInfo *condition_type_info = analyze_expression(context, condition);
 
     if (condition_type_info->type != TYPE_BOOL){
-        print_error("Analysis (line %d): While loop condition must be a boolean expression. \n", line);
+        print_error("Analysis (line %d): Condition must be a boolean expression. \n", line);
     }
 }
 
-// recursively, check if the type info's types match exactly.
 // Note: true if both nodes null, false if only one is.
 static inline bool is_type_numeric(Type type){
     return type == TYPE_INT || type == TYPE_FLOAT;
 }
 
+// recursively, check if the type info's types match exactly.
 static bool types_match(TypeInfo *type_info1, TypeInfo *type_info2){
     if (type_info1 == NULL && type_info2 == NULL){
         return true;

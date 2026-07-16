@@ -1,5 +1,6 @@
-#include "../include/testing.h"
+#include <stdio.h>
 #include <string.h>
+#include "../include/testing.h"
 
 
 // private function declarations

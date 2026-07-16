@@ -76,7 +76,6 @@ TypeInfo *init_type_info(Type type){
     return new_type_info;
 }
 
-//? is this ok?
 static void free_type_info(TypeInfo *type_info_node){
     if (type_info_node == NULL){
         return;
@@ -103,7 +102,6 @@ static ASTNode *init_ast_node(NodeType type, int line){
     return new_node;
 }
 
-//? is this ok?
 void free_ast(ASTNode *ast_node){
     if (ast_node == NULL){
         return;
@@ -197,6 +195,10 @@ void free_ast(ASTNode *ast_node){
             }
             break;
 
+        case STOP_NODE:
+        case SKIP_NODE:
+            break;
+
         case ARITHMETIC_EXPR_NODE:
         case COMPARISON_EXPR_NODE:
         case LOGICAL_EXPR_NODE:
@@ -241,7 +243,6 @@ static LinkedASTNode *init_linked_ast(ASTNode *ast_node){
     return new_node;
 }
 
-//? is this ok?
 static void free_linked_ast(LinkedASTNode *linked_ast_node){
     while (linked_ast_node){
         LinkedASTNode *next = linked_ast_node->next;
@@ -341,7 +342,7 @@ static void expect_must_statement_end(Parser *parser){
 
 
 // skips consecutive newlines in the tokens_list
-// returns true for if program/scope ended after skipping the newlines (got EOL/END token)
+// returns true if there are more statements to parse, false if scope/program ended
 // Note: some functions may require a second stop_token. ones that dont will pass the same token twice
 static bool skip_consecutive_newlines(Parser *parser, TokenType stop_token, TokenType stop_token2){
     while (expect_optional(parser, END_OF_LINE_TOKEN));
@@ -888,7 +889,6 @@ static ASTNode *parse_factor(Parser *parser){
 static ASTNode *parse_atom(Parser *parser){
     switch(current_type(parser)){
         // <call> | IDENTIFIER "[" <expr> "]" | IDENTIFIER
-        //? noted a bug that this case has no break and will fall through, but all cases return? 
         case IDENTIFIER_TOKEN:
             switch(next_type(parser)){
                 // <call> 
@@ -931,7 +931,7 @@ static ASTNode *parse_atom(Parser *parser){
         case OPEN_PAREN_TOKEN:
             expect_must(parser, OPEN_PAREN_TOKEN);
 
-            ASTNode *new_expr = parse_expression(parser);
+            ASTNode *new_expr = parse_bool(parser);
             expect_must(parser, CLOSE_PAREN_TOKEN);
 
             return new_expr;
@@ -963,12 +963,13 @@ static ASTNode *parse_or(Parser *parser){
     ASTNode *left_val = parse_and(parser);
 
     // ( "or" <and> )*
-    while(current_type(parser) == OR_TOKEN){        
+    while(current_type(parser) == OR_TOKEN){  
+        int expr_line = current_line(parser);      
         TokenType op = current_type(parser);
         advance(parser);
         ASTNode *right_val = parse_and(parser);
 
-        ASTNode *new_node = init_ast_node(LOGICAL_EXPR_NODE, current_line(parser)); // put everything in the right struct
+        ASTNode *new_node = init_ast_node(LOGICAL_EXPR_NODE, expr_line); // put everything in the right struct
         new_node->data.expression.left_val = left_val;
         new_node->data.expression.op = op;
         new_node->data.expression.right_val = right_val;
@@ -984,12 +985,13 @@ static ASTNode *parse_and(Parser *parser){
     ASTNode *left_val = parse_comparison(parser);
 
     // ( "and" <cmpp> )*
-    while(current_type(parser) == AND_TOKEN){        
+    while(current_type(parser) == AND_TOKEN){ 
+        int expr_line = current_line(parser);             
         TokenType op = current_type(parser);
         advance(parser);
         ASTNode *right_val = parse_comparison(parser);
 
-        ASTNode *new_node = init_ast_node(LOGICAL_EXPR_NODE, current_line(parser)); // put everything in the right struct
+        ASTNode *new_node = init_ast_node(LOGICAL_EXPR_NODE, expr_line); // put everything in the right struct
         new_node->data.expression.left_val = left_val;
         new_node->data.expression.op = op;
         new_node->data.expression.right_val = right_val;
@@ -1003,21 +1005,17 @@ static ASTNode *parse_and(Parser *parser){
 // <cmp>         ::= "(" <bool> ")" | <expr> <cmp_op> <expr>
 // <cmp_op>      ::= "is" | "more" "than" | "less" "than"
 static ASTNode *parse_comparison(Parser *parser){
-    if (expect_optional(parser, OPEN_PAREN_TOKEN)){
-        ASTNode *new_bool = parse_bool(parser);
+    int cmp_line = current_line(parser); // get before parsing left_val
+    ASTNode *left_val = parse_expression(parser);
 
-        expect_must(parser, CLOSE_PAREN_TOKEN);
-
-        return new_bool;
+    TokenType operator_type = current_type(parser);
+    if (operator_type != IS_TOKEN && operator_type != MORE_TOKEN && operator_type != LESS_TOKEN){
+        return left_val; // no <cmp_op>
     }
 
-    // <expr> <cmp_op> <expr> (totally different path)
-    ASTNode *new_node = init_ast_node(COMPARISON_EXPR_NODE, current_line(parser));
+    ASTNode *new_node = init_ast_node(COMPARISON_EXPR_NODE, cmp_line);
+    new_node->data.expression.left_val = left_val;
 
-    new_node->data.expression.left_val = parse_expression(parser);
-
-    // <cmp_op>, all good paths lead to break.
-    TokenType operator_type = current_type(parser); // expected to be
     switch(operator_type){
         case IS_TOKEN:
             advance(parser);
@@ -1029,15 +1027,11 @@ static ASTNode *parse_comparison(Parser *parser){
             expect_must(parser, THAN_TOKEN);
             break;
 
-        default:
-            print_error(
-                "Parser (line %d): Expected a comparison operator, but got token %d. \n",
-                current_line(parser), current_type(parser)
-            );
+        default: break;
     }
 
-    //? the node only stores MORE and LESS in the op type, not THAN, but theres no reason itd be bad?
-    new_node->data.expression.op = operator_type; // by saving it in a variable and attaching here we save code
+    // for More than / less than only store the first word (more/less)
+    new_node->data.expression.op = operator_type;
     new_node->data.expression.right_val = parse_expression(parser);
 
     return new_node;
