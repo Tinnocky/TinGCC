@@ -61,6 +61,10 @@ static TypeInfo *analyze_index(Context *context, ASTNode *node);
 static TypeInfo *analyze_literal(Context *context, ASTNode *node);
 static TypeInfo *analyze_list_literal(Context *context, ASTNode *node);
 
+/* ----- Control Flow functions ----- */
+static bool always_returns(LinkedASTNode *statements);
+static bool if_always_returns(ASTNode *node);
+
 /* ----- Builtin functions ----- */
 static TypeInfo *analyze_random_call(Context *context, ASTNode *node);
 static TypeInfo *analyze_length_call(Context *context, ASTNode *node);
@@ -102,6 +106,7 @@ static TypeInfo *copy_type_info(TypeInfo *original){
 
     return copy;
 }
+
 
 /* ----- ParamInfo "Methods" ----- */
 // make and return the head of a linked list of ParamInfo's
@@ -175,8 +180,9 @@ static Symbol *init_symbol_func(char *name, TypeInfo *return_type, ParamInfo *pa
     return new_symbol;
 }
 
-void free_symbol(Symbol *symbol){
-    // TODO: do it later before u start testing
+// TODO:
+//? also not sure if it should be public
+static void free_symbol(Symbol *symbol){
 }
 
 
@@ -221,8 +227,9 @@ static Symbol *table_lookup(SymbolTable *table, char *name){
 
 }
 
-void free_symbol_table(SymbolTable *table){
-    // TODO: do it later before u start testing
+// TODO:
+//? also not sure if it should be public
+static void free_symbol_table(SymbolTable *table){
 }
 
 // my own hash implementation, used for storing symbols inside a symboltable (hash map)
@@ -310,18 +317,15 @@ static Symbol *expect_symbol(Context *context, char *name, SymbolKind kind, int 
     return symbol;
 }
 
-// free the scope and its contents
-static void free_scope(Scope *scope){
-    // TODO: do it later before u start testing
-}
 
 //free a full scope stack
-void free_scope_stack(Context *context){
-    // TODO: do it later before u start testing
+// TODO:
+//? also not sure if it should be public
+static void free_scope_stack(Scope *scope){
 }
 
 
-/* ----- Context "Methods" (along with scope methods, technically) ----- */
+/* ----- Context "Methods" ----- */
 // initialize a new context
 Context *init_context(void){
     Context *context = calloc(1, sizeof(Context));
@@ -331,6 +335,13 @@ Context *init_context(void){
     push_scope(context); // push the global scope
 
     return context;
+}
+
+// frees the context and everything thats in it
+// doesnt free context->return_type_info because it should be NULL by the time it runs (oh and its borrowed)
+void free_context(Context *context){
+    free_scope_stack(context->current_scope);
+    free(context);
 }
 
 
@@ -518,7 +529,7 @@ static TypeInfo *analyze_builtin(Context *context, ASTNode *node){
 /* ----- Statement analysis functions ----- */
 // check if already inside a function
 // check default parameters appear only after all non-default parameters
-// go over the body and check all paths return the expected return type
+// go over the body and check all paths return the expected return type (control flow)
 static void analyze_function(Context *context, ASTNode *node){
     if (context->current_return_type_info != NULL){
         print_error("Analysis (line %d): Nested function definitions are not allowed. \n", node->line);
@@ -567,7 +578,13 @@ static void analyze_function(Context *context, ASTNode *node){
         params = params->next;
     }
 
-    analyze_body(context, node->data.function.body); // TODO: check the return types (hard, lets try doing this at last)
+    analyze_body(context, node->data.function.body);
+
+    if (node->data.function.return_type_info->type != TYPE_VOID &&
+        !always_returns(node->data.function.body)){
+            print_error("Analysis (line %d): Function '%s' may not return on all paths. \n",
+            node->line, node->data.function.name);
+    }
 
     pop_scope(context);
     context->current_return_type_info = NULL;
@@ -969,8 +986,8 @@ static TypeInfo *analyze_literal(Context *context, ASTNode *node){
 
 // check if list literal holds anything (it has to hold something so we know its type)
 // check if all values inside it are the same type
-//* Although sometimes int expressions turn to float, we cant create a float list like [1, 2.0, 2.5, 3].
-//* Perhaps ill add that in the future...
+// Note: Although sometimes int expressions turn to float, we cant create a float list like [1, 2.0, 2.5, 3].
+// Note: Perhaps ill add that in the future...
 static TypeInfo *analyze_list_literal(Context *context, ASTNode *node){
     if (node->data.list_literal.values == NULL){
         print_error("Analysis (line %d): A list literal has to hold atleast one value. \n", node->line);
@@ -990,6 +1007,59 @@ static TypeInfo *analyze_list_literal(Context *context, ASTNode *node){
     node->type_info = init_type_info(TYPE_LIST);
     node->type_info->inner = first_value_type_info;
     return node->type_info;
+}
+
+
+/* ----- Control Flow functions ----- */
+// analyze the control flow of a function, meaning if everything returns what it needed to.
+// return bool for if the function definitely returns or no.
+static bool always_returns(LinkedASTNode *statements){
+
+    while (statements != NULL){
+        if (statements->node->node_type == RETURN_NODE){
+            return true;
+        }
+
+        if (statements->node->node_type == IF_NODE){
+            if (if_always_returns(statements->node)){ // if it definitely returns, then return true. if not, keep looking.
+                return true;
+            }
+        }
+
+        statements = statements->next;
+    }
+
+    return false;
+}
+
+// check if an if statement and its else branch definitely returns.
+// for it to definitely return it needs: 1) all branches return, 2) end with an "else" without any condition
+static bool if_always_returns(ASTNode *node){
+    if (node->data.if_statement.else_branch == NULL){
+        return false;
+    }
+
+    if (!always_returns(node->data.if_statement.body)){
+            return false;
+    }
+
+    // go over else branch
+    LinkedASTNode *else_node = node->data.if_statement.else_branch;
+    bool seen_else_without_condition = false;
+
+    while (else_node != NULL){
+        if (!seen_else_without_condition && else_node->node->data.else_statement.condition == NULL){
+            seen_else_without_condition = true;
+        }
+
+        if (!always_returns(else_node->node->data.else_statement.body)){
+            return false;
+        }
+
+        else_node = else_node->next;
+    }
+
+    return seen_else_without_condition;
 }
 
 

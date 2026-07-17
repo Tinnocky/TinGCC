@@ -77,17 +77,9 @@ typedef struct {
 
 
 // public function declarations
-/* ----- Symbol "Methods" ----- */
-void free_symbol(Symbol *symbol);
-
-/* ----- SymbolTable "Methods" ----- */
-void free_symbol_table(SymbolTable *table);
-
-/* ----- Scope "Methods" (only reachable through Context) ----- */
-void free_scope_stack(Context *context);
-
-/* ----- Context "Methods" (along with scope methods, technically) ----- */
+/* ----- Context "Methods" ----- */
 Context *init_context(void);
+void free_context(Context *context);
 
 /* ----- "Main" Analysis functions ----- */
 void run_analysis(Context *context, ASTNode *ast_root);
