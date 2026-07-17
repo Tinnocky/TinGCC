@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -g
+CFLAGS = -Wall -Wextra -g -MMD -MP
 
 BUILD_DIR = build
 SRC_DIR = src
@@ -38,3 +38,4 @@ clean:
 	rm -rf $(BUILD_DIR)
 
 .PHONY: all clean test_lexer test_parser
+-include $(OBJS:.o=.d)

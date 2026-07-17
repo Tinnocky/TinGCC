@@ -5,6 +5,9 @@
 
 
 // private function declarations
+/* ----- TypeInfo "Methods" ----- */
+static TypeInfo *copy_type_info(TypeInfo *original);
+
 /* ----- ParamInfo "Methods" ----- */
 static ParamInfo *init_param_list(LinkedASTNode *params);
 static void add_param_info_data(ParamInfo *param_info, ASTNode *param_node);
@@ -28,37 +31,37 @@ static Symbol *expect_symbol(Context *context, char *name, SymbolKind kind, int 
 static void free_scope(Scope *scope);
 
 /* ----- "Main" Analysis functions ----- */
-static void register_functions(Context *context, LinkedASTNode *statements_head); //* complete!!!
-static void analyze_statement(Context *context, ASTNode *statement); //* complete!!!
-static TypeInfo *analyze_expression(Context *context, ASTNode *expression); //* complete!!!
+static void register_functions(Context *context, LinkedASTNode *statements_head);
+static void analyze_statement(Context *context, ASTNode *statement);
+static TypeInfo *analyze_expression(Context *context, ASTNode *expression);
 static TypeInfo *analyze_builtin(Context *context, ASTNode *node);
 
 /* ----- Statement analysis functions ----- */
 static void analyze_function(Context *context, ASTNode *node);
-static void analyze_create_var(Context *context, ASTNode *node); //* complete!!!
-static void analyze_assignment(Context *context, ASTNode *node); //* complete!!!
-static void analyze_if(Context *context, ASTNode *node); //* complete!!!
-static void analyze_else(Context *context, ASTNode *node); //* complete!!!
-static void analyze_while(Context *context, ASTNode *node); //* complete!!!
-static void analyze_repeat(Context *context, ASTNode *node); //* complete!!!
-static void analyze_repeat_on(Context *context, ASTNode *node); //* complete!!!
-static void analyze_return(Context *context, ASTNode *node); //* complete!!!
-static void analyze_skip_stop(Context *context, ASTNode *node); //* complete!!!
-static void analyze_say(Context *context, ASTNode *node); //* half
+static void analyze_create_var(Context *context, ASTNode *node);
+static void analyze_assignment(Context *context, ASTNode *node);
+static void analyze_if(Context *context, ASTNode *node);
+static void analyze_else(Context *context, ASTNode *node);
+static void analyze_while(Context *context, ASTNode *node);
+static void analyze_repeat(Context *context, ASTNode *node);
+static void analyze_repeat_on(Context *context, ASTNode *node);
+static void analyze_return(Context *context, ASTNode *node);
+static void analyze_skip_stop(Context *context, ASTNode *node);
+static void analyze_say(Context *context, ASTNode *node);
 
 /* ----- Expression analysis functions ----- */
-static TypeInfo *analyze_function_call(Context *context, ASTNode *node); //* half
-static TypeInfo *analyze_identifier(Context *context, ASTNode *node); //* complete!!!
-static TypeInfo *analyze_arithmetic_expr(Context *context, ASTNode *node); //* complete!!!
-static TypeInfo *analyze_comparison_expr(Context *context, ASTNode *node); //* complete!!!
-static TypeInfo *analyze_logical_expr(Context *context, ASTNode *node); //* complete!!!
-static TypeInfo *analyze_unary(Context *context, ASTNode *node); //* complete!!!
-static TypeInfo *analyze_index(Context *context, ASTNode *node); //* complete!!!
-static TypeInfo *analyze_literal(Context *context, ASTNode *node); //* complete!!!
-static TypeInfo *analyze_list_literal(Context *context, ASTNode *node); //* complete!!!
+static TypeInfo *analyze_function_call(Context *context, ASTNode *node);
+static TypeInfo *analyze_identifier(Context *context, ASTNode *node);
+static TypeInfo *analyze_input(Context *context, ASTNode *node);
+static TypeInfo *analyze_arithmetic_expr(Context *context, ASTNode *node);
+static TypeInfo *analyze_comparison_expr(Context *context, ASTNode *node);
+static TypeInfo *analyze_logical_expr(Context *context, ASTNode *node);
+static TypeInfo *analyze_unary(Context *context, ASTNode *node);
+static TypeInfo *analyze_index(Context *context, ASTNode *node);
+static TypeInfo *analyze_literal(Context *context, ASTNode *node);
+static TypeInfo *analyze_list_literal(Context *context, ASTNode *node);
 
 /* ----- Builtin functions ----- */
-static TypeInfo *analyze_input_call(Context *context, ASTNode *node);
 static TypeInfo *analyze_random_call(Context *context, ASTNode *node);
 static TypeInfo *analyze_length_call(Context *context, ASTNode *node);
 static TypeInfo *analyze_add_call(Context *context, ASTNode *node);
@@ -69,25 +72,36 @@ static TypeInfo *analyze_to_char_call(Context *context, ASTNode *node);
 static TypeInfo *analyze_to_string_call(Context *context, ASTNode *node);
 
 /* ---- Inner semantics functions ----- */
-static void analyze_body(Context *context, LinkedASTNode *linked_node); //* complete!!!
-static void expect_bool_condition(Context *context, ASTNode *condition, int line); //* complete!!!
-static inline bool is_type_numeric(Type type); //* complete!!!
-static bool types_match(TypeInfo *type_info1, TypeInfo *type_info2); //* complete!!!
-static bool is_built_in(char *name); //* complete!!!
+static void analyze_body(Context *context, LinkedASTNode *linked_node);
+static void expect_bool_condition(Context *context, ASTNode *condition, int line);
+static inline bool is_type_numeric(Type type);
+static bool types_match(TypeInfo *type_info1, TypeInfo *type_info2);
+static bool is_built_in(char *name);
 static ASTNode *get_arg(LinkedASTNode *args, unsigned int index);
 
 
 // variable declarations
 #define HASH_SEED 5381
-#define HASH_MULTIPLIER 31
+#define HASH_MULTIPLIER 33
 
 char *builtin_names[] = { // names of built in functions
-    "input", "random",
-    "length", "add", "remove",
+    "random", "length", "add", "remove",
     "to_int", "to_float", "to_char", "to_string",
     NULL
 };
 
+
+/* ----- TypeInfo "Methods" ----- */
+static TypeInfo *copy_type_info(TypeInfo *original){
+    if (original == NULL){
+        return NULL;
+    }
+
+    TypeInfo *copy = init_type_info(original->type);
+    copy->inner = deep_copy_type_info(original->inner); // recursive for lists
+
+    return copy;
+}
 
 /* ----- ParamInfo "Methods" ----- */
 // make and return the head of a linked list of ParamInfo's
@@ -420,6 +434,8 @@ static void analyze_statement(Context *context, ASTNode *statement){
         default:
             print_error("Analysis (line %d): Expected a full statement AST node but got %d", statement->line, statement->node_type);
     }
+
+    return;
 }
 
 // analyze an expression ast node, redirect to other functions.
@@ -431,6 +447,9 @@ static TypeInfo *analyze_expression(Context *context, ASTNode *expression){
 
         case IDENTIFIER_NODE:
             return analyze_identifier(context, expression);
+
+        case INPUT_NODE:
+            return analyze_input(context, expression);
 
         case ARITHMETIC_EXPR_NODE:
             return analyze_arithmetic_expr(context, expression);
@@ -456,6 +475,8 @@ static TypeInfo *analyze_expression(Context *context, ASTNode *expression){
         default:
             print_error("Analysis (line %d): Expected an expression AST node but got %d", expression->line, expression->node_type);
     }
+        
+    return NULL;
 }
 
 // checks if the function is a builtin
@@ -463,9 +484,6 @@ static TypeInfo *analyze_expression(Context *context, ASTNode *expression){
 static TypeInfo *analyze_builtin(Context *context, ASTNode *node){
     char *function_name = node->data.function_call.name;
 
-    if (strcmp(function_name, "input") == 0){
-        return analyze_input_call(context, node);
-    }
     if (strcmp(function_name, "random") == 0){
         return analyze_random_call(context, node);
     }
@@ -493,13 +511,19 @@ static TypeInfo *analyze_builtin(Context *context, ASTNode *node){
 
     // shouldnt get here since analyze_builtin is only called when function is known to be a builtin
     print_error("Analysis (line %d): unhandled builtin function. \n", node->line);
+    return NULL;
 }
 
 
 /* ----- Statement analysis functions ----- */
+// check if already inside a function
 // check default parameters appear only after all non-default parameters
 // go over the body and check all paths return the expected return type
 static void analyze_function(Context *context, ASTNode *node){
+    if (context->current_return_type_info != NULL){
+        print_error("Analysis (line %d): Nested function definitions are not allowed. \n", node->line);
+    }
+
     LinkedASTNode *params = node->data.function.params;
     
     bool is_defaults = false; // seen a default param, from now on only default params should appear
@@ -825,7 +849,7 @@ static TypeInfo *analyze_function_call(Context *context, ASTNode *node){
         print_error("Analysis (line %d): Function '%s' call has too many arguments. \n", node->line, function->name);
     }
 
-    node->type_info = function->data.func.return_type_info;
+    node->type_info = copy_type_info(function->data.func.return_type_info);
     return node->type_info;
 }
 
@@ -835,7 +859,13 @@ static TypeInfo *analyze_function_call(Context *context, ASTNode *node){
 static TypeInfo *analyze_identifier(Context *context, ASTNode *node){
     Symbol *identifier = expect_symbol(context, node->data.identifier.name, SYMBOL_VAR, node->line);
 
-    node->type_info = identifier->data.var.type_info;
+    node->type_info = copy_type_info(identifier->data.var.type_info);
+    return node->type_info;
+}
+
+// nothing to check, just assign val
+static TypeInfo *analyze_input(Context *context, ASTNode *node){
+    node->type_info = init_type_info(node->data.input.type);
     return node->type_info;
 }
 
@@ -928,7 +958,7 @@ static TypeInfo *analyze_index(Context *context, ASTNode *node){
         print_error("Analysis (line %d): Index expression should be an integer. \n", node->line);
     }
 
-    node->type_info = list->data.var.type_info->inner; // hold the type of element the index gets
+    node->type_info = copy_type_info(list->data.var.type_info->inner); // hold the type of element the index gets
     return node->type_info;
 }
 
@@ -964,13 +994,6 @@ static TypeInfo *analyze_list_literal(Context *context, ASTNode *node){
 
 
 /* ----- Builtin functions ----- */
-// input()
-static TypeInfo *analyze_input_call(Context *context, ASTNode *node){
-    // type is inferred from context - set to void for now, codegen handles it
-    node->type_info = init_type_info(TYPE_VOID);
-    return node->type_info;
-}
-
 // random(int min, int max)
 static TypeInfo *analyze_random_call(Context *context, ASTNode *node){
     LinkedASTNode *args = node->data.function_call.params;

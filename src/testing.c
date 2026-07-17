@@ -130,6 +130,7 @@ static const char *node_type_to_string(NodeType type){
         case REPEAT_NODE:          return "REPEAT_NODE";
         case REPEAT_ON_NODE:       return "REPEAT_ON_NODE";
         case SAY_NODE:             return "SAY_NODE";
+        case INPUT_NODE:           return "INPUT_NODE";
         case RETURN_NODE:          return "RETURN_NODE";
         case STOP_NODE:            return "STOP_NODE";
         case SKIP_NODE:            return "SKIP_NODE";
@@ -326,6 +327,10 @@ static void print_ast_node(ASTNode *node, const char *prefix, bool is_last) {
         case SAY_NODE:
             printf("%s└─ value:\n", child_prefix);
             print_linked_list(node->data.say.values, label_end);
+            break;
+        
+        case INPUT_NODE:
+            printf("%s└─ type: %s\n", child_prefix, type_to_string(node->data.input.type));
             break;
 
         case RETURN_NODE:

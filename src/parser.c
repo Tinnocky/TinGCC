@@ -45,6 +45,7 @@ static ASTNode *parse_return(Parser *parser);
 static ASTNode *parse_function_param(Parser *parser);
 static LinkedASTNode *parse_full_scope(Parser *parser);
 static LinkedASTNode *parse_body(Parser *parser, TokenType stop_token, TokenType stop_token2);
+static ASTNode *parse_input(Parser *parser);
 static ASTNode *parse_expression(Parser *parser);
 static ASTNode *parse_term(Parser *parser);
 static ASTNode *parse_factor(Parser *parser);
@@ -188,6 +189,9 @@ void free_ast(ASTNode *ast_node){
         case SAY_NODE:
             free_linked_ast(ast_node->data.say.values);
             break;
+        
+        case INPUT_NODE:
+            break;
 
         case RETURN_NODE:
             if (ast_node->data.return_statement.value){ // optional
@@ -229,6 +233,7 @@ void free_ast(ASTNode *ast_node){
     }
 
     // finally, free the node itself
+    free_type_info(ast_node->type_info);
     free(ast_node);
 }
 
@@ -425,6 +430,8 @@ static ASTNode *parse_statement(Parser *parser){
         default:
             print_error("Parser (line %d): Token %d cannot appear at start of statement. \n", current_line(parser), current_type(parser));
     }
+
+    return NULL;
 }
 
 // redirect to parsing functions that start with an identifier
@@ -448,6 +455,8 @@ static ASTNode *parse_identifier_statement(Parser *parser){
         default:
             print_error("Parser (line %d): Got token %d, but didn't expect it. \n", current_line(parser), next_type(parser));
     }
+
+    return NULL;
 }
 
 
@@ -819,6 +828,43 @@ static LinkedASTNode *parse_body(Parser *parser, TokenType stop_token, TokenType
     return statements_head;
 }
 
+// parse an input expression
+// <input>       ::= "input" <scalar>
+static ASTNode *parse_input(Parser *parser){
+    ASTNode *new_node = init_ast_node(INPUT_NODE, current_line(parser));
+
+    expect_must(parser, INPUT_TOKEN);
+
+    switch(current_type(parser)){
+        case INT_TOKEN:    
+            new_node->data.input.type = TYPE_INT;    
+            break;
+
+        case FLOAT_TOKEN:  
+            new_node->data.input.type = TYPE_FLOAT;
+            break;
+
+        case CHAR_TOKEN:    
+            new_node->data.input.type = TYPE_CHAR;   
+            break;
+
+        case STRING_TOKEN: 
+            new_node->data.input.type = TYPE_STRING; 
+            break;
+
+        case BOOL_TOKEN:   
+            new_node->data.input.type = TYPE_BOOL;   
+            break;
+
+        default:
+            print_error("Parser (line %d): input requires a scalar type (int, float, char, string, bool). \n", current_line(parser));
+    }
+
+    advance(parser);
+
+    return new_node;
+}
+
 // parse any arithmetic expression
 // goes by the same pattern as used and explained in parse_term, just different operators
 // <expr>        ::= <term> ( ( "+" | "-" ) <term> )*
@@ -884,7 +930,7 @@ static ASTNode *parse_factor(Parser *parser){
     return parse_atom(parser);
 }
 
-// <atom>        ::= <call> | IDENTIFIER "[" <expr> "]" | IDENTIFIER | <literal> | "(" <expr> ")"
+// <atom>        ::= <call> | IDENTIFIER "[" <expr> "]" | IDENTIFIER | <literal> | "(" <expr> ")" | <input>
 // <call>        ::= IDENTIFIER "(" <args> ")"
 static ASTNode *parse_atom(Parser *parser){
     switch(current_type(parser)){
@@ -936,9 +982,15 @@ static ASTNode *parse_atom(Parser *parser){
 
             return new_expr;
 
+        // <input>
+        case INPUT_TOKEN:
+            return parse_input(parser);
+
         default:
             print_error("Parser (line %d): Expected an <atom> but got token %d. \n", current_line(parser), current_type(parser));
     }
+
+    return NULL;
 }
 
 // parse any logical / comparison expression

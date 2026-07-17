@@ -90,6 +90,7 @@
 
 (* ---------- Arithmetic expressions ---------- *)
 
+<input>       ::= "input" <scalar>
 <expr>        ::= <term> ( ( "+" | "-" ) <term> )*
 <term>        ::= <factor> ( ( "*" | "/" | "%" ) <factor> )*
 <factor>      ::= "-" <factor>
@@ -99,6 +100,7 @@
                 | IDENTIFIER
                 | <literal>
                 | "(" <expr> ")"
+                | <input>
 
 <call>        ::= IDENTIFIER "(" <args> ")"
 <args>        ::= ( <expr> ( "," <expr> )* )?
@@ -133,7 +135,6 @@
 (* Built-in functions (handled in codegen)                       *)
 (* These look like regular calls but are reserved names.         *)
 (*                                                               *)
-(*   input()            — read input, type inferred from context *)
 (*   random(min, max)   — random int in range                    *)
 (*   length(x)          — length of list or string               *)
 (*   add(list, val)     — add value to end of list               *)

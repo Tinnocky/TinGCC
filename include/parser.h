@@ -27,6 +27,7 @@ typedef enum {
 
     /* COMMAND-LIKE */
     SAY_NODE,                /* holds an expression. should also parse interpolated strings from the expression */
+    INPUT_NODE,              /* holds a scalar type */
     RETURN_NODE,             /* holds the expression to return */
     STOP_NODE,               /* just the word "stop" */
     SKIP_NODE,               /* just the word "skip" */
@@ -158,6 +159,10 @@ struct ASTNode {
         struct {
             LinkedASTNode *values; // an expression to print or a linked list of string + interpolated variables
         } say;
+
+        struct {
+            Type type;
+        } input;
 
         struct { 
             ASTNode *value; // any expression to return (optional cuz of void)

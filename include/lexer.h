@@ -26,6 +26,7 @@ typedef enum {
     STOP_TOKEN,             /* break */
     SKIP_TOKEN,             /* continue */
     SAY_TOKEN,              /* print */
+    INPUT_TOKEN,            /* input */
     WITH_TOKEN,             /* shows function parameters */
     RETURN_TOKEN,           /* return */
     TRUE_TOKEN,             /* boolean true */

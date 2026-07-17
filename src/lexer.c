@@ -33,7 +33,7 @@ typedef struct { // struct containing a keyword and their enum TokenType compani
 Keyword keywords[] = {
     {"create", CREATE_TOKEN}, {"as", AS_TOKEN}, {"start", START_SCOPE_TOKEN}, {"end", END_SCOPE_TOKEN},
     {"if", IF_TOKEN}, {"else", ELSE_TOKEN}, {"while", WHILE_TOKEN}, {"stop", STOP_TOKEN}, {"skip", SKIP_TOKEN}, 
-    {"say", SAY_TOKEN}, {"with", WITH_TOKEN}, {"return", RETURN_TOKEN}, {"in", IN_TOKEN},
+    {"say", SAY_TOKEN}, {"input", INPUT_TOKEN}, {"with", WITH_TOKEN}, {"return", RETURN_TOKEN}, {"in", IN_TOKEN},
     {"true", TRUE_TOKEN}, {"false", FALSE_TOKEN}, {"repeat", REPEAT_TOKEN}, {"to", TO_TOKEN}, {"step", STEP_TOKEN},
     {"on", ON_TOKEN}, {"than", THAN_TOKEN},
 
