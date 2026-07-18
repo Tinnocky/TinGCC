@@ -1,0 +1,5 @@
+void main start:
+    create x as int = input int
+    create s as string = input string
+    say x
+end

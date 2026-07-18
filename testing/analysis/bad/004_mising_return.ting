@@ -1,0 +1,7 @@
+int foo start:
+    say "no return"
+end
+
+void main start:
+    say "test"
+end

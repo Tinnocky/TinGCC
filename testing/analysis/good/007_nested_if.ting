@@ -1,0 +1,13 @@
+int classify with [x as int] start:
+    if (x more than 10) start:
+        return 2
+    else (x more than 0) start:
+        return 1
+    else start:
+        return 0
+    end
+end
+
+void main start:
+    say classify(5)
+end

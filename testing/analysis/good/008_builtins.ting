@@ -1,0 +1,6 @@
+void main start:
+    create xs as int list = [1, 2, 3]
+    create n as int = length(xs)
+    create r as int = random(1, 10)
+    add(xs, 4)
+end

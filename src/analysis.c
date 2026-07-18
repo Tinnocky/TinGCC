@@ -11,15 +11,18 @@ static TypeInfo *copy_type_info(TypeInfo *original);
 /* ----- ParamInfo "Methods" ----- */
 static ParamInfo *init_param_list(LinkedASTNode *params);
 static void add_param_info_data(ParamInfo *param_info, ASTNode *param_node);
+static void free_param_info(ParamInfo *params);
 
 /* ----- Symbol "Methods" ----- */
 static Symbol *init_symbol_var(char *name, TypeInfo *type, int line); 
 static Symbol *init_symbol_func(char *name, TypeInfo *return_type, ParamInfo *params, int line);
+static void free_symbol(Symbol *symbol);
 
 /* ----- SymbolTable "Methods" ----- */
 static SymbolTable *init_symbol_table(void);
 static void table_add(SymbolTable *table, Symbol *symbol);
 static Symbol *table_lookup(SymbolTable *table, char *name);
+static void free_symbol_table(SymbolTable *table);
 static unsigned int hash(char *name);
 
 /* ----- Scope "Methods" (only reachable through Context) ----- */
@@ -29,6 +32,7 @@ static inline void scope_add(Context *context, Symbol *symbol);
 static Symbol *scope_lookup(Context *context, char *name);
 static Symbol *expect_symbol(Context *context, char *name, SymbolKind kind, int line);
 static void free_scope(Scope *scope);
+static void free_scope_stack(Scope *scope);
 
 /* ----- "Main" Analysis functions ----- */
 static void register_functions(Context *context, LinkedASTNode *statements_head);
@@ -96,13 +100,15 @@ char *builtin_names[] = { // names of built in functions
 
 
 /* ----- TypeInfo "Methods" ----- */
+// copy a all of a type info into a totally new node
+// Note: this doesnt exist in parser but here cuz its only used here. Other methods are there
 static TypeInfo *copy_type_info(TypeInfo *original){
     if (original == NULL){
         return NULL;
     }
 
     TypeInfo *copy = init_type_info(original->type);
-    copy->inner = deep_copy_type_info(original->inner); // recursive for lists
+    copy->inner = copy_type_info(original->inner); // recursive for lists
 
     return copy;
 }
@@ -139,8 +145,10 @@ static ParamInfo *init_param_list(LinkedASTNode *params){
 
 // add data from the passed *param_node to the passed *param_info
 static void add_param_info_data(ParamInfo *param_info, ASTNode *param_node){
-    param_info->name = param_node->data.function_param.name;
-    param_info->type_info = param_node->data.function_param.type_info;
+    param_info->name = strdup(param_node->data.function_param.name);
+    check_nullptr(param_info->name, "...");
+
+    param_info->type_info = copy_type_info(param_node->data.function_param.type_info);
 
     if (param_node->data.function_param.default_val != NULL){ // optional
         param_info->has_default = true;
@@ -148,6 +156,19 @@ static void add_param_info_data(ParamInfo *param_info, ASTNode *param_node){
     else {
         param_info->has_default = false;
     }  
+}
+
+// free all param infos passed 
+static void free_param_info(ParamInfo *params){
+    while (params != NULL){
+        ParamInfo *next = params->next;
+
+        free(params->name);
+        free_type_info(params->type_info);
+        free(params);
+
+        params = next;
+    }
 }
 
 
@@ -158,9 +179,12 @@ static Symbol *init_symbol_var(char *name, TypeInfo *type, int line){
     check_nullptr(new_symbol, "Analysis: malloc for Symbol failed.\n");
 
     new_symbol->kind = SYMBOL_VAR;
-    new_symbol->name = name;
+
+    new_symbol->name = strdup(name);
+    check_nullptr(new_symbol->name, "...");
+
     new_symbol->line = line;
-    new_symbol->data.var.type_info = type;
+    new_symbol->data.var.type_info = copy_type_info(type);
     new_symbol->data.var.is_initialized = false; // at creation, symbol does not yet hold a value
 
     return new_symbol;
@@ -172,17 +196,33 @@ static Symbol *init_symbol_func(char *name, TypeInfo *return_type, ParamInfo *pa
     check_nullptr(new_symbol, "Analysis: malloc for Symbol failed.\n");
 
     new_symbol->kind = SYMBOL_FUNC;
-    new_symbol->name = name;
+
+    new_symbol->name = strdup(name);
+    check_nullptr(new_symbol->name, "...");
+
     new_symbol->line = line;
     new_symbol->data.func.params = params;
-    new_symbol->data.func.return_type_info = return_type;
+    new_symbol->data.func.return_type_info = copy_type_info(return_type);
 
     return new_symbol;
 }
 
-// TODO:
-//? also not sure if it should be public
+// free one symbol and its data
 static void free_symbol(Symbol *symbol){
+    free(symbol->name);
+
+    if (symbol->kind == SYMBOL_VAR){
+        free_type_info(symbol->data.var.type_info);
+    }
+    else if (symbol->kind == SYMBOL_FUNC){
+        free_param_info(symbol->data.func.params);
+        free_type_info(symbol->data.func.return_type_info);
+    }
+    else { // not sure if its needed
+        print_error("...");
+    }
+
+    free(symbol);
 }
 
 
@@ -227,9 +267,22 @@ static Symbol *table_lookup(SymbolTable *table, char *name){
 
 }
 
-// TODO:
-//? also not sure if it should be public
+// delete a full symbol table
 static void free_symbol_table(SymbolTable *table){
+    for (int i = 0; i < SYMBOL_TABLE_LENGTH; i++){
+        LinkedSymbol *symbols = table->table[i];
+
+        while (symbols != NULL){
+            LinkedSymbol *next = symbols->next;
+
+            free_symbol(symbols->symbol);
+            free(symbols);
+
+            symbols = next;
+        }
+    }
+
+    free(table);
 }
 
 // my own hash implementation, used for storing symbols inside a symboltable (hash map)
@@ -317,11 +370,21 @@ static Symbol *expect_symbol(Context *context, char *name, SymbolKind kind, int 
     return symbol;
 }
 
+// frees one scope
+static void free_scope(Scope *scope){
+    free_symbol_table(scope->table);
+    free(scope);
+}
 
 //free a full scope stack
-// TODO:
-//? also not sure if it should be public
 static void free_scope_stack(Scope *scope){
+    while (scope != NULL){
+        Scope *parent = scope->parent;
+
+        free_scope(scope);
+
+        scope = parent;
+    }   
 }
 
 
@@ -731,13 +794,17 @@ static void analyze_repeat(Context *context, ASTNode *node){
     context->is_inside_loop = true;
     push_scope(context);
 
+    TypeInfo *loop_var_type_info = init_type_info(TYPE_INT);
+
     Symbol *loop_variable = init_symbol_var(
         node->data.repeat.var_name,
-        init_type_info(TYPE_INT), 
+        loop_var_type_info,
         node->line
     );
     loop_variable->data.var.is_initialized = true;
     scope_add(context, loop_variable);
+
+    free_type_info(loop_var_type_info); // since its getting copied in init_symbol_var we dont need this one
 
     analyze_body(context, node->data.repeat.body);
 
@@ -1005,7 +1072,7 @@ static TypeInfo *analyze_list_literal(Context *context, ASTNode *node){
     }
 
     node->type_info = init_type_info(TYPE_LIST);
-    node->type_info->inner = first_value_type_info;
+    node->type_info->inner = copy_type_info(first_value_type_info);
     return node->type_info;
 }
 

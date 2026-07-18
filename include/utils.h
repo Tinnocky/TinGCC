@@ -12,7 +12,7 @@ typedef struct Lexer Lexer;
 
 // public function declarations
 /* ----- error handling ----- */
-void print_error(const char *format, ...);
+_Noreturn void print_error(const char *format, ...);
 void check_nullptr(const void* ptr, const char *format, ...);
 
 /* ----- all other ----- */

@@ -10,6 +10,7 @@
 static void arguments_check(int argc, char *argv[]);
 static void run_lexer_test(char *filename);
 static void run_parser_test(char *filename);
+static void run_analysis_test(char *filename);
 
 
 // check if arguments passed are correct and if the file passed is a .ting file
@@ -76,6 +77,7 @@ int main(int argc, char *argv[]){
     // which test to run...
     // run_lexer_test(filename);
     // run_parser_test(filename);
+    run_analysis_test(filename);
 
     return 0;
 }

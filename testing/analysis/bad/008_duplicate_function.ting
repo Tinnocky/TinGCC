@@ -1,0 +1,11 @@
+int foo start:
+    return 1
+end
+
+int foo start:
+    return 2
+end
+
+void main start:
+    say "test"
+end

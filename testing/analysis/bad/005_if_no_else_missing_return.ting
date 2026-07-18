@@ -1,0 +1,9 @@
+int foo with [x as int] start:
+    if (x more than 0) start:
+        return 1
+    end
+end
+
+void main start:
+    say "test"
+end

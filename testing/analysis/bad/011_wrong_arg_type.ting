@@ -1,0 +1,7 @@
+int compute with [a as int] start:
+    return a
+end
+
+void main start:
+    create x as int = compute("hello")
+end

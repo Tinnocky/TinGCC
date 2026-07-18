@@ -1,0 +1,3 @@
+void main start:
+    create x as int = "hello"
+end

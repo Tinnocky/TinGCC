@@ -5,9 +5,6 @@
 
 
 // private function declarations
-/* ----- TypeInfo "methods" ----- */
-static void free_type_info(TypeInfo *);
-
 /* ----- AST "methods" ----- */
 static ASTNode *init_ast_node(NodeType type, int line);
 static LinkedASTNode *init_linked_ast(ASTNode *ast_node);
@@ -77,7 +74,7 @@ TypeInfo *init_type_info(Type type){
     return new_type_info;
 }
 
-static void free_type_info(TypeInfo *type_info_node){
+void free_type_info(TypeInfo *type_info_node){
     if (type_info_node == NULL){
         return;
     }

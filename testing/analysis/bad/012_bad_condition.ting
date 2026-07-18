@@ -1,0 +1,5 @@
+void main start:
+    if (5) start:
+        say "test"
+    end
+end

@@ -215,6 +215,7 @@ typedef struct {
 // public function declarations
 /* ----- TypeInfo "methods" ----- */
 TypeInfo *init_type_info(Type type);
+void free_type_info(TypeInfo *type_info_node);
 
 /* ----- AST "methods" ----- */
 void free_ast(ASTNode *ast_root);

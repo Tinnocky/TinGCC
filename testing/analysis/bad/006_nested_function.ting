@@ -1,0 +1,10 @@
+int outer start:
+    int inner start:
+        return 5
+    end
+    return 1
+end
+
+void main start:
+    say "test"
+end

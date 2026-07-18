@@ -1,0 +1,4 @@
+void main start:
+    create x as int = 5
+    create y as int = x[0]
+end

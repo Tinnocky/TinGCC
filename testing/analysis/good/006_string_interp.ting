@@ -1,0 +1,4 @@
+void main start:
+    create name as string = "world"
+    say "hello [name]"
+end

@@ -37,6 +37,7 @@ static const char *token_type_to_string(TokenType type){
         case STOP_TOKEN:            return "STOP_TOKEN";
         case SKIP_TOKEN:            return "SKIP_TOKEN";
         case SAY_TOKEN:             return "SAY_TOKEN";
+        case INPUT_TOKEN:           return "INPUT_TOKEN";
         case WITH_TOKEN:            return "WITH_TOKEN";
         case RETURN_TOKEN:          return "RETURN_TOKEN";
         case TRUE_TOKEN:            return "TRUE_TOKEN";

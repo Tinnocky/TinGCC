@@ -1,0 +1,11 @@
+int foo with [x as int] start:
+    if (x more than 0) start:
+        return 1
+    else start:
+        return 0
+    end
+end
+
+void main start:
+    create y as int = foo(5)
+end

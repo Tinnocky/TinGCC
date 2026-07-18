@@ -1,0 +1,5 @@
+void main start:
+    create x as int = 5
+    create y as int = x + 3
+    say "hello"
+end

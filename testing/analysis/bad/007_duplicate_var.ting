@@ -1,0 +1,4 @@
+void main start:
+    create x as int = 1
+    create x as int = 2
+end

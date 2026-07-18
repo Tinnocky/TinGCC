@@ -1,0 +1,7 @@
+int compute with [a as int, b as int] start:
+    return a + b
+end
+
+void main start:
+    create x as int = compute(3, 5)
+end
