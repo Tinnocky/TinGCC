@@ -1,0 +1,32 @@
+PROGRAM_NODE (line 0)
+└─ FUNCTION_NODE (line 1)
+   ├─ name: 'main'
+   ├─ return: TYPE_VOID
+   └─ body:
+      └─ IF_NODE (line 2)
+         ├─ condition:
+         │  └─ LOGICAL_EXPR_NODE (line 2)
+         │     ├─ op: AND_TOKEN
+         │     ├─ left:
+         │     │  └─ LOGICAL_EXPR_NODE (line 2)
+         │     │     ├─ op: OR_TOKEN
+         │     │     ├─ left:
+         │     │     │  └─ IDENTIFIER_NODE (line 2)
+         │     │     │     └─ name: 'a'
+         │     │     └─ right:
+         │     │        └─ IDENTIFIER_NODE (line 2)
+         │     │           └─ name: 'b'
+         │     └─ right:
+         │        └─ COMPARISON_EXPR_NODE (line 2)
+         │           ├─ op: IS_TOKEN
+         │           ├─ left:
+         │           │  └─ IDENTIFIER_NODE (line 2)
+         │           │     └─ name: 'c'
+         │           └─ right:
+         │              └─ LITERAL_NODE (line 2)
+         │                 └─ TYPE_INT '1'
+         └─ body:
+            └─ SAY_NODE (line 3)
+               └─ value:
+                  └─ LITERAL_NODE (line 3)
+                     └─ TYPE_STRING 'yes'

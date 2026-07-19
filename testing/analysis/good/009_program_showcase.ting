@@ -1,0 +1,28 @@
+create greeting as string = "Hello"
+create x as int = 10
+create lst as int list = [1,2,3]
+
+void main start:
+    say greeting
+    if (x more than 5) start:
+        say x
+    else (x is 5) start:
+        if (lst[0] is 1) start:
+            say "[x]"
+        end
+    else start:
+        say 0
+    end
+
+    while (x more than 0) start:
+        x -= 1
+    end
+
+    repeat (i, 0 to 3, step 1) start:
+        say i
+    end
+
+    repeat on (n in lst) start:
+        say n
+    end
+end

@@ -1,0 +1,3 @@
+say "hello [name] world"
+say "[x]"
+say "a[f(x)]b"

@@ -1,0 +1,11 @@
+void main start:
+    if ((1 + 2) more than 3) start:
+        say "a"
+    end
+    if ((1 + 2) * 3 more than 5) start:
+        say "b"
+    end
+    if (not (x more than 0)) start:
+        say "c"
+    end
+end

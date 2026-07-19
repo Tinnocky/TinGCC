@@ -222,7 +222,7 @@ void free_ast(ASTNode *ast_root);
 
 /* ----- Parser "methods" ----- */
 Parser *init_parser(TokenNode *tokens_head);
-void close_parser(Parser *parser);
+void free_parser(Parser *parser);
 
 /* ----- "Main" Parsing functions (that mostly redirect to other parsing functions) ----- */
 ASTNode *run_parser(Parser *parser); // aka parse program

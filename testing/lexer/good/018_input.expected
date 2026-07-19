@@ -1,0 +1,9 @@
+create -> CREATE_TOKEN, LEN: 6, LINE: 1 
+x -> IDENTIFIER_TOKEN, LEN: 1, LINE: 1 
+as -> AS_TOKEN, LEN: 2, LINE: 1 
+int -> INT_TOKEN, LEN: 3, LINE: 1 
+= -> ASSIGN_TOKEN, LEN: 1, LINE: 1 
+input -> INPUT_TOKEN, LEN: 5, LINE: 1 
+int -> INT_TOKEN, LEN: 3, LINE: 1 
+\n -> END_OF_LINE_TOKEN, LEN: 1, LINE: 2 
+EOF -> EOF_TOKEN, LEN: 0, LINE: 2 

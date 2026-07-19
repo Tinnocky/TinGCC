@@ -126,7 +126,7 @@ void free_tokens_list(TokenNode *token_node);
 
 /* ----- Lexer "methods" ----- */
 Lexer *init_lexer(const char *filename);
-void close_lexer(Lexer *lexer);
+void free_lexer(Lexer *lexer);
 TokenNode *run_lexer(Lexer *lexer);
 
 

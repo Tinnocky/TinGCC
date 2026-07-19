@@ -1,0 +1,5 @@
+void main start:
+    if ((a or b) and c is 1) start:
+        say "yes"
+    end
+end

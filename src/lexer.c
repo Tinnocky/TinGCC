@@ -101,7 +101,7 @@ Lexer *init_lexer(const char *filename){
     return lexer;
 }
 
-void close_lexer(Lexer *lexer){
+void free_lexer(Lexer *lexer){
     fclose(lexer->file);
     free(lexer);
 }

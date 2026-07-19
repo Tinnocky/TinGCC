@@ -1,0 +1,71 @@
+PROGRAM_NODE (line 0)
+└─ FUNCTION_NODE (line 1)
+   ├─ name: 'main'
+   ├─ return: TYPE_VOID
+   └─ body:
+      ├─ IF_NODE (line 2)
+      │  ├─ condition:
+      │  │  └─ COMPARISON_EXPR_NODE (line 2)
+      │  │     ├─ op: MORE_TOKEN
+      │  │     ├─ left:
+      │  │     │  └─ ARITHMETIC_EXPR_NODE (line 2)
+      │  │     │     ├─ op: PLUS_TOKEN
+      │  │     │     ├─ left:
+      │  │     │     │  └─ LITERAL_NODE (line 2)
+      │  │     │     │     └─ TYPE_INT '1'
+      │  │     │     └─ right:
+      │  │     │        └─ LITERAL_NODE (line 2)
+      │  │     │           └─ TYPE_INT '2'
+      │  │     └─ right:
+      │  │        └─ LITERAL_NODE (line 2)
+      │  │           └─ TYPE_INT '3'
+      │  └─ body:
+      │     └─ SAY_NODE (line 3)
+      │        └─ value:
+      │           └─ LITERAL_NODE (line 3)
+      │              └─ TYPE_STRING 'a'
+      ├─ IF_NODE (line 5)
+      │  ├─ condition:
+      │  │  └─ COMPARISON_EXPR_NODE (line 5)
+      │  │     ├─ op: MORE_TOKEN
+      │  │     ├─ left:
+      │  │     │  └─ ARITHMETIC_EXPR_NODE (line 5)
+      │  │     │     ├─ op: MULT_TOKEN
+      │  │     │     ├─ left:
+      │  │     │     │  └─ ARITHMETIC_EXPR_NODE (line 5)
+      │  │     │     │     ├─ op: PLUS_TOKEN
+      │  │     │     │     ├─ left:
+      │  │     │     │     │  └─ LITERAL_NODE (line 5)
+      │  │     │     │     │     └─ TYPE_INT '1'
+      │  │     │     │     └─ right:
+      │  │     │     │        └─ LITERAL_NODE (line 5)
+      │  │     │     │           └─ TYPE_INT '2'
+      │  │     │     └─ right:
+      │  │     │        └─ LITERAL_NODE (line 5)
+      │  │     │           └─ TYPE_INT '3'
+      │  │     └─ right:
+      │  │        └─ LITERAL_NODE (line 5)
+      │  │           └─ TYPE_INT '5'
+      │  └─ body:
+      │     └─ SAY_NODE (line 6)
+      │        └─ value:
+      │           └─ LITERAL_NODE (line 6)
+      │              └─ TYPE_STRING 'b'
+      └─ IF_NODE (line 8)
+         ├─ condition:
+         │  └─ UNARY_NODE (line 8)
+         │     ├─ op: NOT_TOKEN
+         │     └─ operand:
+         │        └─ COMPARISON_EXPR_NODE (line 8)
+         │           ├─ op: MORE_TOKEN
+         │           ├─ left:
+         │           │  └─ IDENTIFIER_NODE (line 8)
+         │           │     └─ name: 'x'
+         │           └─ right:
+         │              └─ LITERAL_NODE (line 8)
+         │                 └─ TYPE_INT '0'
+         └─ body:
+            └─ SAY_NODE (line 9)
+               └─ value:
+                  └─ LITERAL_NODE (line 9)
+                     └─ TYPE_STRING 'c'
