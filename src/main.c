@@ -32,7 +32,7 @@ static void run_lexer_test(char *filename){
     print_tokens_list(tokens_head);
 
     free_tokens_list(tokens_head);
-    close_lexer(lexer);
+    free_lexer(lexer);
 }
 
 static void run_parser_test(char *filename){
@@ -44,9 +44,9 @@ static void run_parser_test(char *filename){
     print_ast(ast_root);
 
     free_ast(ast_root);
-    close_parser(parser);
+    free_parser(parser);
     free_tokens_list(tokens_head);
-    close_lexer(lexer);
+    free_lexer(lexer);
 }
 
 static void run_analysis_test(char *filename){
@@ -63,9 +63,9 @@ Lexer *lexer = init_lexer(filename);
 
     free_context(context);
     free_ast(ast_root);
-    close_parser(parser);
+    free_parser(parser);
     free_tokens_list(tokens_head);
-    close_lexer(lexer);
+    free_lexer(lexer);
 }
 
 

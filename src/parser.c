@@ -270,7 +270,7 @@ Parser *init_parser(TokenNode *tokens_head){
     return parser;
 }
 
-void close_parser(Parser *parser){
+void free_parser(Parser *parser){
     free(parser);
 }
 

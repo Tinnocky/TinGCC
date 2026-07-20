@@ -6,18 +6,19 @@
 
 
 #define OUTPUT_FILENAME "output.c"
+#define RUNTIME_FILENAME "ting_runtime.h"
 
 
 typedef struct {
     FILE *file; // we write the code to here, .c file
-    int bracket_depth;
+    int bracket_depth; // TODO: make this do something. add it later
     int temp_var_count; // sometimes ill need to create variables for stuff that didnt get a name in the .ting code. this keeps track
 } Codegen;
 
 
 // public function declarations
 /* ----- Codegen "methods" ----- */
-Codegen *init_codegen(char *filename); //? maybe a const char *filename. need to add it to other functions that get that too
+Codegen *init_codegen();
 void free_codegen(Codegen *codegen);
 
 /* ----- Main functions ----- */
