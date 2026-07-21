@@ -18,7 +18,7 @@ typedef struct {
 
 // public function declarations
 /* ----- Codegen "methods" ----- */
-Codegen *init_codegen();
+Codegen *init_codegen(void);
 void free_codegen(Codegen *codegen);
 
 /* ----- Main functions ----- */

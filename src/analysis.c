@@ -822,6 +822,8 @@ static void analyze_repeat_on(Context *context, ASTNode *node){
         print_error("Analysis (line %d): '%s' is not a list type. \n", node->line, node->data.repeat_on.list_name);
     }
 
+    node->type_info = copy_type_info(list->data.var.type_info->inner); // keep element for codegen
+
     bool prev_is_inside_loop = context->is_inside_loop;
     context->is_inside_loop = true;
     push_scope(context);

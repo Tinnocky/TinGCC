@@ -7,30 +7,28 @@ static void gen_statement(Codegen *codegen, ASTNode *statement);
 static void gen_expression(Codegen *codegen, ASTNode *expression);
 
 /* ----- Statement generation functions ----- */
-static void gen_function(Codegen *codegen, ASTNode *node);
+static void gen_function(Codegen *codegen, ASTNode *node); //* complete!!!
 static void gen_create_var(Codegen *codegen, ASTNode *node); //* complete!!!
-static void gen_create_var_list(Codegen *codegen, ASTNode *node);
+static void gen_create_var_list(Codegen *codegen, ASTNode *node); //* complete!!!
 static void gen_assignment(Codegen *codegen, ASTNode *node); //* complete!!!
-static void gen_assignment_list(Codegen *codegen, ASTNode *node);
+static void gen_assignment_list(Codegen *codegen, ASTNode *node); //* complete!!!
 static void gen_if(Codegen *codegen, ASTNode *node); //* complete!!!
 static void gen_else(Codegen *codegen, ASTNode *node); //* complete!!!
 static void gen_while(Codegen *codegen, ASTNode *node); //* complete!!!
-static void gen_repeat(Codegen *codegen, ASTNode *node);
-static void gen_repeat_on(Codegen *codegen, ASTNode *node);
-static void gen_say(Codegen *codegen, ASTNode *node);
+static void gen_repeat(Codegen *codegen, ASTNode *node); //* complete!!!
+static void gen_repeat_on(Codegen *codegen, ASTNode *node); //* complete!!!
+static void gen_say(Codegen *codegen, ASTNode *node); //* complete!!!
 static void gen_return(Codegen *codegen, ASTNode *node); //* complete!!!
 static void gen_stop(Codegen *codegen, ASTNode *node); //* complete!!!
 static void gen_skip(Codegen *codegen, ASTNode *node); //* complete!!!
 
 /* ----- Expression generation functions ----- */
-static void gen_function_call(Codegen *codegen, ASTNode *node);
+static void gen_function_call(Codegen *codegen, ASTNode *node); //! later, function symbols + builtin
 static void gen_identifier(Codegen *codegen, ASTNode *node); //* complete!!!
-static void gen_input(Codegen *codegen, ASTNode *node);
-static void gen_arithmetic_expr(Codegen *codegen, ASTNode *node);
-static void gen_comparison_expr(Codegen *codegen, ASTNode *node);
-static void gen_logical_expr(Codegen *codegen, ASTNode *node);
+static void gen_input(Codegen *codegen, ASTNode *node); //! later, strings as lists? we will tackle that way later
+static void gen_binary_expr(Codegen *codegen, ASTNode *node); //* complete!!!
 static void gen_unary(Codegen *codegen, ASTNode *node); //* complete!!!
-static void gen_index(Codegen *codegen, ASTNode *node);
+static void gen_index(Codegen *codegen, ASTNode *node); //* complete!!!
 static void gen_literal(Codegen *codegen, ASTNode *node); //* complete!!!
 static void gen_list_literal(Codegen *codegen, ASTNode *node);
 
@@ -48,13 +46,16 @@ static void gen_to_string_call(Codegen *codegen, ASTNode *node);
 static void gen_body(Codegen *codegen, LinkedASTNode *statements); //* complete!!!
 static void gen_function_param(Codegen *codegen, ASTNode *node); //* complete!!!
 static void gen_type(Codegen *codegen, TypeInfo *type_info);
+static void gen_box_item(Codegen *codegen, Type type, ASTNode *value); //* complete!!!
+static void gen_unbox_item(Codegen *codegen, Type type, const char *list_name, const char *index_name, ASTNode *index_expr); //* complete!!!
 static const char *op_to_c_string(TokenType operator); //* complete!!!
+static const char *type_to_specifier(Type type); //* complete!!!
 
 
 /* ----- Codegen "methods" ----- */
 // initialize a new codegen struct with all data
 // Note: the output file's name doesnt matter because its getting compiled straight away and deleted afterwards
-Codegen *init_codegen(){
+Codegen *init_codegen(void){
     Codegen *new_codegen = malloc(sizeof(Codegen));
 
     new_codegen->file = fopen(OUTPUT_FILENAME, "w");
@@ -141,13 +142,9 @@ static void gen_expression(Codegen *codegen, ASTNode *expression){
             return gen_function_call(codegen, expression);
 
         case ARITHMETIC_EXPR_NODE:
-            return gen_arithmetic_expr(codegen, expression);
-
         case COMPARISON_EXPR_NODE:
-            return gen_comparison_expr(codegen, expression);
-
         case LOGICAL_EXPR_NODE:
-            return gen_logical_expr(codegen, expression);
+            return gen_binary_expr(codegen, expression);
 
         case IDENTIFIER_NODE:
             return gen_identifier(codegen, expression);
@@ -179,7 +176,6 @@ static void gen_function(Codegen *codegen, ASTNode *node){
     fprintf(codegen->file, " %s(", node->data.function.name);
 
     // parameters
-    // TODO: handle default values
     LinkedASTNode *params = node->data.function.params;
 
     while (params != NULL){
@@ -217,7 +213,34 @@ static void gen_create_var(Codegen *codegen, ASTNode *node){
 // writes a list with possible assignment
 // TODO: this
 static void gen_create_var_list(Codegen *codegen, ASTNode *node){
+    fprintf(codegen->file, "List *%s = ", node->data.create_var.name);
+       
+    ASTNode *value = node->data.create_var.value;
 
+    if (value == NULL){
+        fprintf(codegen->file, "init_list(); \n", node->data.create_var.name);
+        return;
+    }
+
+    if (value->node_type == LIST_LITERAL_NODE){
+        fprintf(codegen->file, "init_list(); \n", node->data.create_var.name);
+
+        Type elem_type = node->data.create_var.type_info->inner->type;
+        LinkedASTNode *values = value->data.list_literal.values;
+
+        while (values != NULL){
+            fprintf(codegen->file, "list_add(%s, ", node->data.create_var.name);
+            gen_box_item(codegen, elem_type, values->node);
+            fprintf(codegen->file, ");\n");
+
+            values = values->next;
+        }
+        return;
+    }
+
+    // its assigned some sort of expression
+    gen_expression(codegen, node->data.create_var.value);
+    fprintf(codegen->file, "; \n");
 }
 
 // <assign>      ::= <lvalue> <assign_op> <expr> "\n"
@@ -243,7 +266,32 @@ static void gen_assignment(Codegen *codegen, ASTNode *node){
 // deletes the contents of an existing list and assigns new ones from scratch
 // TODO: this
 static void gen_assignment_list(Codegen *codegen, ASTNode *node){
+    if (node->data.assignment.index_expr != ASSIGN_TOKEN){
+        print_error("Codegen (line %d): Cannot do this type of assignment on a list. \n", node->line);
+    }
+    
+    ASTNode *value = node->data.assignment.value;
 
+    if (value->node_type == LIST_LITERAL_NODE){
+        fprintf(codegen->file, "list_clear(%d); \n", node->data.assignment.name);
+
+        Type elem_type = value->type_info->inner->type;
+        LinkedASTNode *values = value->data.list_literal.values;
+
+        while (values != NULL){
+            fprintf(codegen->file, "list_add(%s, ", node->data.assignment.name);
+            gen_box_item(codegen, elem_type, values->node);
+            fprintf(codegen->file, "); \n");
+
+            values = values->next;
+        }
+        return;
+    }
+
+    // its assigned some sort of expression
+    fprintf(codegen->file, "%s = ", node->data.assignment.name);
+    gen_expression(codegen, node->data.assignment.value);
+    fprintf(codegen->file, "; \n");
 }
 
 // also generates the else branch
@@ -291,28 +339,94 @@ static void gen_while(Codegen *codegen, ASTNode *node){
 }
 
 // <repeat>      ::= "repeat" "(" IDENTIFIER "," <expr> "to" <expr> ("," "step" <expr>)? ")" "start" ":" <statement>* "end"
+// Note: we generate the variables earlier in the code, not inside the for loop init
 static void gen_repeat(Codegen *codegen, ASTNode *node){
-    fprintf(codegen->file, "for (int %s = %d, ", node->data.repeat.var_name, node->data.repeat.from);
+    fprintf(codegen->file, "{ \n"); // open var initialization block
 
-    // TODO: generate condition part. cant do it with gen expression obv
+    int id_num = codegen->temp_var_count++;
 
-    fprintf(codegen->file, "%s += %d) { \n", node->data.repeat.var_name, node->data.repeat.step);
+    // init i = from
+    fprintf(codegen->file, "int %s = ", node->data.repeat.var_name);
+    gen_expression(codegen, node->data.repeat.from);
+    fprintf(codegen->file, "; \n");
+
+    // init to
+    fprintf(codegen->file, "int _to%d = ", id_num);
+    gen_expression(codegen, node->data.repeat.to);
+    fprintf(codegen->file, ";\n");
+
+    // init step
+    fprintf(codegen->file, "int _step%d = ", id_num);
+    if (node->data.repeat.step == NULL){ // defaults to +1
+        fprintf(codegen->file, "1");
+    }
+    else {
+        gen_expression(codegen, node->data.repeat.step);
+    }
+    fprintf(codegen->file, ";\n");
+
+    // for loop
+    fprintf(codegen->file, "for (;"); // init already done before
+    fprintf(codegen->file,
+        "(_step%d > 0 && %s < _to%d) || (_step%d < 0 && %s > _to%d)",
+        id_num, node->data.repeat.var_name, id_num,
+        id_num, node->data.repeat.var_name, id_num);
+    fprintf(codegen->file, "; %s += _step%d) {\n", node->data.repeat.var_name, id_num);
     gen_body(codegen, node->data.repeat.body);
-    fprintf(codegen->file, "} \n");
+    fprintf(codegen->file, "}\n");
+
+    fprintf(codegen->file, "} \n"); // close var initialization block
 }
 
+// generates a for loop with the length of the list and assign the item value each time
 // <repeat_on>   ::= "repeat" "on" "(" IDENTIFIER "in" IDENTIFIER ")" "start" ":" <statement>* "end"
-// TODO:
 static void gen_repeat_on(Codegen *codegen, ASTNode *node){
+    fprintf(codegen->file, "{ \n"); // open var initialization block
 
+    int id_num = codegen->temp_var_count++;
+
+    // init length. static to start of loop
+    fprintf(codegen->file, "int _len%d = list_length(%s); \n", id_num, node->data.repeat_on.list_name);
+
+    // for loop
+    fprintf(codegen->file, "for (int _i%d = 0; ", id_num);
+    fprintf(codegen->file, "_i%d < _len%d; ", id_num, id_num);
+    fprintf(codegen->file, "_i%d += 1) {\n", id_num); // step always +1
+
+    // init loop variable
+    gen_type(codegen, node->type_info);
+    fprintf(codegen->file, " %s = ", node->data.repeat_on.var_name);
+
+    char index_name[32]; // build the index name "_i%d" to pass as the index to the gen_unbox function
+    snprintf(index_name, sizeof(index_name), "_i%d", id_num);
+
+    gen_unbox_item(codegen, node->type_info->type, node->data.repeat_on.list_name, index_name, NULL);
+    fprintf(codegen->file, ";\n");
+
+    // continue for loop
+    gen_body(codegen, node->data.repeat_on.body);
+    fprintf(codegen->file, "}\n");
+
+    fprintf(codegen->file, "} \n"); // close var initialization block
 }
 
 // <say>         ::= "say" <expr> "\n"
-// TODO:
-// TODO: need to add and handle includes (stdio). i can always add it but maybe i should only if say is in there. later
-// TODO: need to handle the interpolationnnn.. .. .. do it later
+// Note: actually emits consecutive printf's for each value
 static void gen_say(Codegen *codegen, ASTNode *node){
+    LinkedASTNode *values = node->data.say.values;
 
+    while (values != NULL){
+        const char *specifier = type_to_specifier(values->node->type_info->type);
+
+        fprintf(codegen->file, "printf(\"%s\", ", specifier);
+        gen_expression(codegen, values->node);  
+        fprintf(codegen->file, ");\n");
+
+        values = values->next;
+    }
+
+    //? Not sure if needed
+    fprintf(codegen->file, "printf(\"\\n\");\n"); // trailing newline for the whole say statement
 }
 
 // <return>      ::= "return" <expr>? "\n"
@@ -340,6 +454,7 @@ static void gen_skip(Codegen *codegen, ASTNode *node){
 
 /* ----- Expression generation functions ----- */
 // TODO: handle built in function calls
+// TODO: handle default values. need to keep track of all function declarations and add it in call site.
 static void gen_function_call(Codegen *codegen, ASTNode *node){
     fprintf(codegen->file, "%s(", node->data.function_call.name);
 
@@ -369,19 +484,12 @@ static void gen_input(Codegen *codegen, ASTNode *node){
     
 }
 
-// TODO: this
-static void gen_arithmetic_expr(Codegen *codegen, ASTNode *node){
-
-}
-
-// TODO: this
-static void gen_comparison_expr(Codegen *codegen, ASTNode *node){
-
-}
-
-// TODO: this
-static void gen_logical_expr(Codegen *codegen, ASTNode *node){
-
+static void gen_binary_expr(Codegen *codegen, ASTNode *node){
+    fprintf(codegen->file, "(");
+    gen_expression(codegen, node->data.expression.left_val);
+    fprintf(codegen->file, " %s ", op_to_c_string(node->data.expression.op));
+    gen_expression(codegen, node->data.expression.right_val);
+    fprintf(codegen->file, ")");
 }
 
 // TODO: this
@@ -392,9 +500,9 @@ static void gen_unary(Codegen *codegen, ASTNode *node){
     fprintf(codegen->file, ")");
 }
 
-// TODO: this
+// generates an expression with an index. like xs[i] 
 static void gen_index(Codegen *codegen, ASTNode *node){
-
+    gen_unbox_item(codegen, node->type_info->type, node->data.index.list_name, NULL, node->data.index.index_expr);
 }
 
 static void gen_literal(Codegen *codegen, ASTNode *node){
@@ -463,6 +571,88 @@ static void gen_type(Codegen *codegen, TypeInfo *type_info){
 
 }
 
+// writes the correct boxing function
+static void gen_box_item(Codegen *codegen, Type type, ASTNode *value){
+    switch(type){
+        case TYPE_INT:
+            fprintf(codegen->file, "box_int(");
+            break;
+
+        case TYPE_FLOAT:
+            fprintf(codegen->file, "box_float(");
+            break;
+
+        case TYPE_CHAR:
+            fprintf(codegen->file, "box_char(");
+            break;
+
+        case TYPE_BOOL:
+            fprintf(codegen->file, "box_bool(");
+            break;
+
+        case TYPE_STRING:
+        case TYPE_LIST:
+            return gen_expression(codegen, value);
+
+        default:
+            print_error("Codegen: can't box type %d.\n", type);
+    }
+
+    // for scalars, continue the call
+    gen_expression(codegen, value);
+    fprintf(codegen->file, ")");
+}
+
+// writes the correct unboxing function or casts to a list if typeinfo's a list.
+// both gets the item from the list at the index and unboxes it
+// Note: *index_name is used for gen_repeat_on while *index_expr is used for other. only one of them should exist
+static void gen_unbox_item(Codegen *codegen, Type type, const char *list_name, const char *index_name, ASTNode *index_expr){
+    switch(type){ // call correct function based on type
+        case TYPE_INT:    
+            fprintf(codegen->file, "unbox_int(");
+            break;
+
+        case TYPE_FLOAT:  
+            fprintf(codegen->file, "unbox_float(");
+            break;
+
+        case TYPE_CHAR:   
+            fprintf(codegen->file, "unbox_char(");
+            break;
+
+        case TYPE_BOOL:   
+            fprintf(codegen->file, "unbox_bool(");
+            break;
+
+        case TYPE_STRING: 
+            fprintf(codegen->file, "(char *)");
+            break;
+            
+        case TYPE_LIST:   
+            fprintf(codegen->file, "(List *)");
+            break;
+
+        default: 
+            print_error("Codegen: can't unbox type %d.\n", type);
+    }
+
+    fprintf(codegen->file, "list_get(%s, ", list_name);
+
+    if (index_name != NULL){
+        fprintf(codegen->file, "%s", index_name);
+    }
+    else if (index_expr != NULL){
+        gen_expression(codegen, index_expr);
+    }
+
+    fprintf(codegen->file, ")");
+
+    // close the unbox_ paren for scalars (casts have no closing paren)
+    if (type != TYPE_STRING && type != TYPE_LIST){
+        fprintf(codegen->file, ")");
+    }
+}
+
 // a switch for operators (which are stored in ast nodes as enums)
 // to be converted to their respective C code
 static const char *op_to_c_string(TokenType operator){
@@ -496,6 +686,22 @@ static const char *op_to_c_string(TokenType operator){
 
         default:
             print_error("Codegen: no C operator for token %d. \n", operator);
+            return NULL;
+    }
+}
+
+// a switch that returns the type specifier to be used in prints for the passed type
+// only takes a type because gen_say will never print a list as one specifier
+static const char *type_to_specifier(Type type){
+    switch(type){
+        case TYPE_INT:    return "%d";
+        case TYPE_FLOAT:  return "%f";
+        case TYPE_CHAR:   return "%c";
+        case TYPE_STRING: return "%s";
+        case TYPE_BOOL:   return "%d"; // bools print as 0/1
+
+        default:
+            print_error("Codegen: no printf specifier for type %d. \n", type);
             return NULL;
     }
 }
