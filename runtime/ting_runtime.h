@@ -17,6 +17,7 @@ void *list_get(List *list, int index);
 void list_remove(List *list, int index);
 int list_length(List *list);
 void list_clear(List *list);
+List *list_of(int length, ...);
 void list_free(List *list);
 
 /* ----- Box helpers ----- */
@@ -28,5 +29,20 @@ int   unbox_int(void *item);
 float unbox_float(void *item);
 char  unbox_char(void *item);
 int   unbox_bool(void *item);
+
+/* ----- Input helpers ----- */
+int input_int(void);
+float input_float(void);
+char input_char(void);
+char *input_string(void);
+
+/* ----- Built in functions ----- */
+int ting_random(int min, int max);
+int string_length(char *string);
+//? what do these next ones take?
+int to_int();
+float to_float();
+char to_char();
+char *to_string();
 
 #endif

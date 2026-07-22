@@ -1,10 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <stdarg.h>
 #include "ting_runtime.h"
 
-
+// private function declarations
+/* ----- List methods ----- */
 static void list_realloc(List *list);
 static void check_index(int index, int length);
+
+/* ----- Input helpers ----- */
+static char *read_line(void);
 
 
 /* ----- List methods ----- */
@@ -70,6 +76,33 @@ void list_clear(List *list){
     }
 }
 
+// a variadic function that gets the any amount of variables (and the amount itself)
+// and returns a list holding them
+List *list_of(int length, ...){
+    if (length < 0){
+        return NULL;
+    }
+
+    List *new_list = init_list();
+
+    va_list args;
+    va_start(args, length);
+
+    for (int i = 0; i < length; i++){
+        list_add(new_list, va_arg(args, void *));
+    }
+
+    va_end(args);
+    return new_list;
+}
+
+static void check_index(int index, int length){
+    if (index < 0 || index >= length){
+        fprintf(stderr, "index %d out of bounds \n", index);
+        exit(1);
+    }   
+}
+
 // double the size of the list's data
 static void list_realloc(List *list){
     list->capacity *= 2;
@@ -79,13 +112,6 @@ static void list_realloc(List *list){
         fprintf(stderr, "Null Pointer Error: Couldn't realloc a list's data. \n");
         exit(1);
     }
-}
-
-static void check_index(int index, int length){
-    if (index < 0 || index >= length){
-        fprintf(stderr, "index %d out of bounds \n", index);
-        exit(1);
-    }   
 }
 
 // TODO: need to free the content recursively i think
@@ -134,4 +160,101 @@ void *box_bool(int value){
 
 int unbox_bool(void *item){
     return *(int *)item;
+}
+
+
+/* ----- Input helpers ----- */
+int input_int(void){
+    char *line = read_line();
+    if (line == NULL){
+        fprintf(stderr, "Couldn't read input for an int. \n");
+        exit(1);
+    }
+
+    int value = atoi(line);
+    free(line);
+
+    return value;
+}
+
+float input_float(void){
+    char *line = read_line();
+    if (line == NULL){
+        fprintf(stderr, "Couldn't read input for a float. \n");
+        exit(1);
+    }
+
+    float value = atof(line);
+    free(line);
+
+    return value;
+}
+
+char input_char(void){
+    char *line = read_line();
+    if (line == NULL){
+        fprintf(stderr, "Couldn't read input for a char. \n");
+        exit(1);
+    }
+
+    char value = line[0];
+    free(line);
+
+    return value;
+}
+
+char *input_string(void){
+    char *line = read_line();
+    if (line == NULL){
+        fprintf(stderr, "Couldn't read input for a string. \n");
+        exit(1);
+    }
+
+    return line;
+}
+
+// reads the whole line from stdin and returns it
+static char *read_line(void){
+    char *line = NULL;
+    size_t cap = 0;
+
+    ssize_t length = getline(&line, &cap, stdin);
+    if (length == -1){
+        free(line);
+        return NULL;
+    }
+
+    // strip the trailing newline if present
+    if (length > 0 && line[length - 1] == '\n'){
+        line[length - 1] = '\0';
+    }
+
+    return line;
+}
+
+
+/* ----- Built in functions ----- */
+int ting_random(int min, int max){
+
+}
+
+int string_length(char *string){
+
+}
+
+//? what do these next ones take?
+int to_int(){
+
+}
+
+float to_float(){
+
+}
+
+char to_char(){
+
+}
+
+char *to_string(){
+
 }

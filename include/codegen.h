@@ -6,7 +6,7 @@
 
 
 #define OUTPUT_FILENAME "output.c"
-#define RUNTIME_FILENAME "ting_runtime.h"
+#define RUNTIME_FILENAME "\"ting_runtime.h\""
 
 
 typedef struct {
