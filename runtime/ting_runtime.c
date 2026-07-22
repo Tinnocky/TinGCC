@@ -1,7 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 #include <stdarg.h>
+#include <time.h>
+#include <errno.h>
+#include <limits.h>
 #include "ting_runtime.h"
 
 // private function declarations
@@ -11,6 +15,13 @@ static void check_index(int index, int length);
 
 /* ----- Input helpers ----- */
 static char *read_line(void);
+
+
+// variable declarations
+#define INT_STRING_SIZE   16   // enough for any 32-bit int plus sign and null
+#define FLOAT_STRING_SIZE 32   // enough for %f output
+
+static int seeded = 0;
 
 
 /* ----- List methods ----- */
@@ -171,11 +182,12 @@ int input_int(void){
         exit(1);
     }
 
-    int value = atoi(line);
+    int value = string_to_int(line);
     free(line);
 
     return value;
 }
+
 
 float input_float(void){
     char *line = read_line();
@@ -184,7 +196,7 @@ float input_float(void){
         exit(1);
     }
 
-    float value = atof(line);
+    float value = string_to_float(line);
     free(line);
 
     return value;
@@ -235,26 +247,128 @@ static char *read_line(void){
 
 /* ----- Built in functions ----- */
 int ting_random(int min, int max){
+    if (min > max){
+        fprintf(stderr, "ting_random(int min, int max): min <= max only. \n");
+        exit(1);
+    }
 
+    if (!seeded){
+        srand(time(NULL));
+        seeded = 1;
+    }
+
+    return min + rand() % (max - min + 1);
 }
 
-int string_length(char *string){
+// Note: casts that dont appear down here are probably simple and done inline through codegen.c
 
+int string_to_int(char *value){
+    if (value == NULL || value[0] == '\0'){
+        fprintf(stderr, "string_to_int: cannot convert an empty string. \n");
+        exit(1);
+    }
+
+    char *end;
+    errno = 0;
+    long result = strtol(value, &end, 10); // base 10
+
+    if (end == value){ // nothing was parsed at all
+        fprintf(stderr, "string_to_int: '%s' is not a number. \n", value);
+        exit(1);
+    }
+
+    if (*end != '\0'){ // there's trailing junk after the number
+        fprintf(stderr, "string_to_int: '%s' has trailing characters. \n", value);
+        exit(1);
+    }
+
+    if (errno == ERANGE || result > INT_MAX || result < INT_MIN){
+        fprintf(stderr, "string_to_int: '%s' is out of int range. \n", value);
+        exit(1);
+    }
+
+    return (int)result;
 }
 
-//? what do these next ones take?
-int to_int(){
+float string_to_float(char *value){
+    if (value == NULL || value[0] == '\0'){
+        fprintf(stderr, "string_to_float: cannot convert an empty string. \n");
+        exit(1);
+    }
 
+    char *end;
+    errno = 0;
+    float result = strtof(value, &end);
+
+    if (end == value){ // nothing was parsed at all
+        fprintf(stderr, "string_to_float: '%s' is not a number. \n", value);
+        exit(1);
+    }
+
+    if (*end != '\0'){ // there's trailing junk after the number
+        fprintf(stderr, "string_to_float: '%s' has trailing characters. \n", value);
+        exit(1);
+    }
+
+    if (errno == ERANGE){ // overflow or underflow
+        fprintf(stderr, "string_to_float: '%s' is out of float range. \n", value);
+        exit(1);
+    }
+
+    return result;
 }
 
-float to_float(){
+// just gives the first character of the string
+char string_to_char(char *value){
+    if (value == NULL || value[0] == '\0'){
+        fprintf(stderr, "string_to_char(): Cannot convert an empty string. \n");
+        exit(1);
+    }
 
+    return value[0];
 }
 
-char to_char(){
+char *int_to_string(int value){
+    char *result = malloc(INT_STRING_SIZE);
+    if (result == NULL){
+        fprintf(stderr, "int_to_string: malloc failed. \n");
+        exit(1);
+    }
 
+    snprintf(result, INT_STRING_SIZE, "%d", value);
+    return result;
 }
 
-char *to_string(){
+char *float_to_string(float value){
+    char *result = malloc(FLOAT_STRING_SIZE);
+    if (result == NULL){
+        fprintf(stderr, "float_to_string: malloc failed. \n");
+        exit(1);
+    }
 
+    snprintf(result, FLOAT_STRING_SIZE, "%f", value);
+    return result;
+}
+
+char *char_to_string(char value){
+    char *result = malloc(2); // the char + null terminator
+    if (result == NULL){
+        fprintf(stderr, "char_to_string: malloc failed. \n");
+        exit(1);
+    }
+
+    result[0] = value;
+    result[1] = '\0';
+    return result;
+}
+
+char *bool_to_string(int value){
+    // strdup so the caller can free it like any other converted string
+    char *result = strdup(value ? "true" : "false");
+    if (result == NULL){
+        fprintf(stderr, "bool_to_string: strdup failed. \n");
+        exit(1);
+    }
+
+    return result;
 }

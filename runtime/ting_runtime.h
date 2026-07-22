@@ -38,11 +38,69 @@ char *input_string(void);
 
 /* ----- Built in functions ----- */
 int ting_random(int min, int max);
-int string_length(char *string);
-//? what do these next ones take?
-int to_int();
-float to_float();
-char to_char();
-char *to_string();
+
+int string_to_int(char *value){
+    if (value == NULL || value[0] == '\0'){
+        fprintf(stderr, "string_to_int: cannot convert an empty string. \n");
+        exit(1);
+    }
+
+    char *end;
+    errno = 0;
+    long result = strtol(value, &end, 10); // base 10
+
+    if (end == value){ // nothing was parsed at all
+        fprintf(stderr, "string_to_int: '%s' is not a number. \n", value);
+        exit(1);
+    }
+
+    if (*end != '\0'){ // there's trailing junk after the number
+        fprintf(stderr, "string_to_int: '%s' has trailing characters. \n", value);
+        exit(1);
+    }
+
+    if (errno == ERANGE || result > INT_MAX || result < INT_MIN){
+        fprintf(stderr, "string_to_int: '%s' is out of int range. \n", value);
+        exit(1);
+    }
+
+    return (int)result;
+}
+
+float string_to_float(char *value){
+    if (value == NULL || value[0] == '\0'){
+        fprintf(stderr, "string_to_float: cannot convert an empty string. \n");
+        exit(1);
+    }
+
+    char *end;
+    errno = 0;
+    float result = strtof(value, &end);
+
+    if (end == value){ // nothing was parsed at all
+        fprintf(stderr, "string_to_float: '%s' is not a number. \n", value);
+        exit(1);
+    }
+
+    if (*end != '\0'){ // there's trailing junk after the number
+        fprintf(stderr, "string_to_float: '%s' has trailing characters. \n", value);
+        exit(1);
+    }
+
+    if (errno == ERANGE){ // overflow or underflow
+        fprintf(stderr, "string_to_float: '%s' is out of float range. \n", value);
+        exit(1);
+    }
+
+    return result;
+}
+
+// just gives the first character of the string
+char string_to_char(char *value);
+char *int_to_string(int value);
+char *float_to_string(float value);
+char *char_to_string(char value);
+char *bool_to_string(int value);
+
 
 #endif
