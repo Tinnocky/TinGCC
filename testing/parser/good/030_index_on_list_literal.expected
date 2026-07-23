@@ -1,0 +1,22 @@
+PROGRAM_NODE (line 0)
+└─ FUNCTION_NODE (line 1)
+   ├─ name: 'main'
+   ├─ return: TYPE_VOID
+   └─ body:
+      └─ CREATE_VAR_NODE (line 2)
+         ├─ name: 'x'
+         ├─ type: TYPE_INT
+         └─ value:
+            └─ INDEX_NODE (line 2)
+               ├─ target:
+               │  └─ LIST_LITERAL_NODE (line 2)
+               │     └─ values:
+               │        ├─ LITERAL_NODE (line 2)
+               │        │  └─ TYPE_INT '10'
+               │        ├─ LITERAL_NODE (line 2)
+               │        │  └─ TYPE_INT '20'
+               │        └─ LITERAL_NODE (line 2)
+               │           └─ TYPE_INT '30'
+               └─ index:
+                  └─ LITERAL_NODE (line 2)
+                     └─ TYPE_INT '1'

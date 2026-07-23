@@ -16,7 +16,9 @@ PROGRAM_NODE (line 0)
       │     └─ INPUT_NODE (line 3)
       │        └─ type: TYPE_STRING
       └─ ASSIGNMENT_NODE (line 4)
-         ├─ name: 'x'
+         ├─ target:
+         │  └─ IDENTIFIER_NODE (line 4)
+         │     └─ name: 'x'
          ├─ op: ASSIGN_TOKEN
          └─ value:
             └─ INPUT_NODE (line 4)

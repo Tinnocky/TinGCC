@@ -1,0 +1,7 @@
+void main start:
+    create lst as int list = [10, 20, 30]
+    create i as int = 1
+    create m as int list list = [[1, 2], [3, 4]]
+    say "see: [lst[i]]"
+    say "nested: [m[0][1]] done"
+end

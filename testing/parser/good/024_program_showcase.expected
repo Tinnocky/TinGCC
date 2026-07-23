@@ -65,7 +65,9 @@ PROGRAM_NODE (line 0)
       │  │           └─ TYPE_INT '0'
       │  └─ body:
       │     └─ ASSIGNMENT_NODE (line 12)
-      │        ├─ name: 'x'
+      │        ├─ target:
+      │        │  └─ IDENTIFIER_NODE (line 12)
+      │        │     └─ name: 'x'
       │        ├─ op: SUB_TO_TOKEN
       │        └─ value:
       │           └─ LITERAL_NODE (line 12)
@@ -88,7 +90,9 @@ PROGRAM_NODE (line 0)
       │              └─ name: 'i'
       └─ REPEAT_ON_NODE (line 17)
          ├─ var: 'n'
-         ├─ list: 'lst'
+         ├─ list:
+         │  └─ IDENTIFIER_NODE (line 17)
+         │     └─ name: 'lst'
          └─ body:
             └─ SAY_NODE (line 18)
                └─ value:

@@ -1,0 +1,5 @@
+void main start:
+    create xs as int list = [1, 2, 3]
+    xs[0] += 5
+    xs[1] *= 2
+end

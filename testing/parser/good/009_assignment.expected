@@ -1,36 +1,48 @@
 PROGRAM_NODE (line 0)
 ├─ ASSIGNMENT_NODE (line 1)
-│  ├─ name: 'x'
+│  ├─ target:
+│  │  └─ IDENTIFIER_NODE (line 1)
+│  │     └─ name: 'x'
 │  ├─ op: ASSIGN_TOKEN
 │  └─ value:
 │     └─ LITERAL_NODE (line 1)
 │        └─ TYPE_INT '5'
 ├─ ASSIGNMENT_NODE (line 2)
-│  ├─ name: 'x'
+│  ├─ target:
+│  │  └─ IDENTIFIER_NODE (line 2)
+│  │     └─ name: 'x'
 │  ├─ op: ADD_TO_TOKEN
 │  └─ value:
 │     └─ LITERAL_NODE (line 2)
 │        └─ TYPE_INT '1'
 ├─ ASSIGNMENT_NODE (line 3)
-│  ├─ name: 'x'
+│  ├─ target:
+│  │  └─ IDENTIFIER_NODE (line 3)
+│  │     └─ name: 'x'
 │  ├─ op: SUB_TO_TOKEN
 │  └─ value:
 │     └─ LITERAL_NODE (line 3)
 │        └─ TYPE_INT '1'
 ├─ ASSIGNMENT_NODE (line 4)
-│  ├─ name: 'x'
+│  ├─ target:
+│  │  └─ IDENTIFIER_NODE (line 4)
+│  │     └─ name: 'x'
 │  ├─ op: MULT_TO_TOKEN
 │  └─ value:
 │     └─ LITERAL_NODE (line 4)
 │        └─ TYPE_INT '2'
 ├─ ASSIGNMENT_NODE (line 5)
-│  ├─ name: 'x'
+│  ├─ target:
+│  │  └─ IDENTIFIER_NODE (line 5)
+│  │     └─ name: 'x'
 │  ├─ op: DIVIDE_TO_TOKEN
 │  └─ value:
 │     └─ LITERAL_NODE (line 5)
 │        └─ TYPE_INT '2'
 └─ ASSIGNMENT_NODE (line 6)
-   ├─ name: 'x'
+   ├─ target:
+   │  └─ IDENTIFIER_NODE (line 6)
+   │     └─ name: 'x'
    ├─ op: MOD_TO_TOKEN
    └─ value:
       └─ LITERAL_NODE (line 6)

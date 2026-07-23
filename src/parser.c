@@ -912,6 +912,11 @@ static ASTNode *parse_postfix(Parser *parser){
 
     ASTNode *current = parse_primary(parser);
 
+    // do not catch interpolated stuff inside a literal node
+    if (current->node_type == LITERAL_NODE && current->data.literal.type == TYPE_STRING){
+        return current;
+    }
+
     // every bracket wraps what we have so far in a new index node
     while (expect_optional(parser, OPEN_BRACKET_TOKEN)){
         ASTNode *new_index = init_ast_node(INDEX_NODE, expr_line);

@@ -1,0 +1,5 @@
+void main start:
+    create m as int list list = [[1, 2], [3, 4]]
+    create x as int = m[0][1]
+    m[1][0] = 9
+end

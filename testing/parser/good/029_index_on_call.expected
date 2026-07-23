@@ -1,0 +1,31 @@
+PROGRAM_NODE (line 0)
+├─ FUNCTION_NODE (line 1)
+│  ├─ name: 'make'
+│  ├─ return: TYPE_LIST(TYPE_INT)
+│  └─ body:
+│     └─ RETURN_NODE (line 2)
+│        └─ value:
+│           └─ LIST_LITERAL_NODE (line 2)
+│              └─ values:
+│                 ├─ LITERAL_NODE (line 2)
+│                 │  └─ TYPE_INT '1'
+│                 ├─ LITERAL_NODE (line 2)
+│                 │  └─ TYPE_INT '2'
+│                 └─ LITERAL_NODE (line 2)
+│                    └─ TYPE_INT '3'
+└─ FUNCTION_NODE (line 5)
+   ├─ name: 'main'
+   ├─ return: TYPE_VOID
+   └─ body:
+      └─ CREATE_VAR_NODE (line 6)
+         ├─ name: 'x'
+         ├─ type: TYPE_INT
+         └─ value:
+            └─ INDEX_NODE (line 6)
+               ├─ target:
+               │  └─ FUNCTION_CALL_NODE (line 6)
+               │     ├─ name: 'make'
+               │     └─ args:
+               └─ index:
+                  └─ LITERAL_NODE (line 6)
+                     └─ TYPE_INT '0'

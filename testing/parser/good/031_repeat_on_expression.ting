@@ -1,0 +1,6 @@
+void main start:
+    create m as int list list = [[1, 2], [3, 4]]
+    repeat on (n in m[0]) start:
+        say n
+    end
+end

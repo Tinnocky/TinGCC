@@ -1,0 +1,29 @@
+PROGRAM_NODE (line 0)
+└─ FUNCTION_NODE (line 1)
+   ├─ name: 'main'
+   ├─ return: TYPE_VOID
+   └─ body:
+      ├─ CREATE_VAR_NODE (line 2)
+      │  ├─ name: 'name'
+      │  ├─ type: TYPE_STRING
+      │  └─ value:
+      │     └─ LITERAL_NODE (line 2)
+      │        └─ TYPE_STRING 'world'
+      ├─ CREATE_VAR_NODE (line 3)
+      │  ├─ name: 'n'
+      │  ├─ type: TYPE_INT
+      │  └─ value:
+      │     └─ LITERAL_NODE (line 3)
+      │        └─ TYPE_INT '5'
+      └─ SAY_NODE (line 4)
+         └─ value:
+            ├─ LITERAL_NODE (line 4)
+            │  └─ TYPE_STRING 'hello '
+            ├─ IDENTIFIER_NODE (line 4)
+            │  └─ name: 'name'
+            ├─ LITERAL_NODE (line 4)
+            │  └─ TYPE_STRING ' you have '
+            ├─ IDENTIFIER_NODE (line 4)
+            │  └─ name: 'n'
+            └─ LITERAL_NODE (line 4)
+               └─ TYPE_STRING ' items'

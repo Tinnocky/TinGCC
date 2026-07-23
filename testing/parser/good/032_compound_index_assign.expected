@@ -1,0 +1,43 @@
+PROGRAM_NODE (line 0)
+└─ FUNCTION_NODE (line 1)
+   ├─ name: 'main'
+   ├─ return: TYPE_VOID
+   └─ body:
+      ├─ CREATE_VAR_NODE (line 2)
+      │  ├─ name: 'xs'
+      │  ├─ type: TYPE_LIST(TYPE_INT)
+      │  └─ value:
+      │     └─ LIST_LITERAL_NODE (line 2)
+      │        └─ values:
+      │           ├─ LITERAL_NODE (line 2)
+      │           │  └─ TYPE_INT '1'
+      │           ├─ LITERAL_NODE (line 2)
+      │           │  └─ TYPE_INT '2'
+      │           └─ LITERAL_NODE (line 2)
+      │              └─ TYPE_INT '3'
+      ├─ ASSIGNMENT_NODE (line 3)
+      │  ├─ target:
+      │  │  └─ INDEX_NODE (line 3)
+      │  │     ├─ target:
+      │  │     │  └─ IDENTIFIER_NODE (line 3)
+      │  │     │     └─ name: 'xs'
+      │  │     └─ index:
+      │  │        └─ LITERAL_NODE (line 3)
+      │  │           └─ TYPE_INT '0'
+      │  ├─ op: ADD_TO_TOKEN
+      │  └─ value:
+      │     └─ LITERAL_NODE (line 3)
+      │        └─ TYPE_INT '5'
+      └─ ASSIGNMENT_NODE (line 4)
+         ├─ target:
+         │  └─ INDEX_NODE (line 4)
+         │     ├─ target:
+         │     │  └─ IDENTIFIER_NODE (line 4)
+         │     │     └─ name: 'xs'
+         │     └─ index:
+         │        └─ LITERAL_NODE (line 4)
+         │           └─ TYPE_INT '1'
+         ├─ op: MULT_TO_TOKEN
+         └─ value:
+            └─ LITERAL_NODE (line 4)
+               └─ TYPE_INT '2'
