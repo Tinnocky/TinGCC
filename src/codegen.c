@@ -5,8 +5,15 @@
 
 
 // private function declarations
+/* ----- Function "methods" -----*/
+static Function *init_function(ASTNode *func_node);
+static LinkedFunction *init_linked_function(Function *function);
+static LinkedASTNode *get_function_params(Codegen *codegen, char *name, int line);
+static void free_function(Function *function);
+static void free_linked_function(LinkedFunction *linked_func);
+
 /* ----- Main functions ----- */
-static void gen_function_declarations(Codegen *codegen, ASTNode *ast_root);
+static LinkedFunction *gen_function_declarations(Codegen *codegen, ASTNode *ast_root);
 static void gen_statement(Codegen *codegen, ASTNode *statement);
 static void gen_expression(Codegen *codegen, ASTNode *expression);
 
@@ -15,6 +22,7 @@ static void gen_function(Codegen *codegen, ASTNode *node);
 static void gen_create_var(Codegen *codegen, ASTNode *node);
 static void gen_create_var_list(Codegen *codegen, ASTNode *node);
 static void gen_assignment(Codegen *codegen, ASTNode *node); //! need to add multiple indexing
+static void gen_assignment_index_expr(Codegen *codegen, ASTNode *node);
 static void gen_assignment_list(Codegen *codegen, ASTNode *node); //! need to add multiple indexing
 static void gen_if(Codegen *codegen, ASTNode *node);
 static void gen_else(Codegen *codegen, ASTNode *node);
@@ -27,7 +35,7 @@ static void gen_stop(Codegen *codegen, ASTNode *node);
 static void gen_skip(Codegen *codegen, ASTNode *node);
 
 /* ----- Expression generation functions ----- */
-static void gen_function_call(Codegen *codegen, ASTNode *node); //! later, function symbols + builtin
+static void gen_function_call(Codegen *codegen, ASTNode *node);
 static void gen_identifier(Codegen *codegen, ASTNode *node);
 static void gen_input(Codegen *codegen, ASTNode *node);
 static void gen_binary_expr(Codegen *codegen, ASTNode *node);
@@ -37,13 +45,12 @@ static void gen_literal(Codegen *codegen, ASTNode *node);
 static void gen_list_literal(Codegen *codegen, ASTNode *node);
 
 /* ----- Builtin generation functions ----- */
-static bool gen_built_in_prefix(Codegen *codegen, ASTNode *node);
+static bool gen_built_in_call(Codegen *codegen, ASTNode *node);
 static void gen_length_prefix(Codegen *codegen, ASTNode *node);
 static void gen_to_int_prefix(Codegen *codegen, ASTNode *node);
 static void gen_to_float_prefix(Codegen *codegen, ASTNode *node);
 static void gen_to_char_prefix(Codegen *codegen, ASTNode *node);
 static void gen_to_string_prefix(Codegen *codegen, ASTNode *node);
-static bool gen_built_in_call(Codegen *codegen, ASTNode *node);
 static void gen_add_call(Codegen *codegen, ASTNode *node);
 static void gen_remove_call(Codegen *codegen, ASTNode *node);
 
@@ -54,8 +61,60 @@ static void gen_type(Codegen *codegen, Type type);
 static void gen_box_item(Codegen *codegen, Type type, ASTNode *value);
 static void gen_unbox_item(Codegen *codegen, Type type, const char *list_name, const char *index_name, ASTNode *index_expr);
 static const char *op_to_c_string(TokenType operator);
+static TokenType compound_to_binary_op(TokenType op);
 static const char *type_to_specifier(Type type);
 static ASTNode *get_arg(LinkedASTNode *args, unsigned int index);
+
+
+// variable declarations
+#define TEMP_NAME_SIZE 32
+
+
+/* ----- Function "methods" -----*/
+static Function *init_function(ASTNode *func_node){
+    Function *new_function = malloc(sizeof(Function));
+
+    new_function->name = strdup(func_node->data.function.name);
+    check_nullptr(new_function->name, "Codegen: Strdup for a function's name failed. \n");
+
+    new_function->params = func_node->data.function.params;
+
+    return new_function;
+}
+
+static LinkedFunction *init_linked_function(Function *function){
+    LinkedFunction *new_linked_func = malloc(sizeof(LinkedFunction));
+
+    new_linked_func->func = function;
+    new_linked_func->next = NULL;
+
+    return new_linked_func;
+}
+
+static LinkedASTNode *get_function_params(Codegen *codegen, char *name, int line){
+    LinkedFunction *functions = codegen->functions;
+
+    while (functions != NULL){
+        if (strcmp(functions->func->name, name) == 0){
+            return functions->func->params;
+        }
+
+        functions = functions->next;
+    }
+
+    print_error("Codegen (line %d): Tried to get function params, but function was not found. \n", line);
+    return NULL;
+}
+
+// TODO: do it later at the end
+static void free_function(Function *function){
+
+}
+
+// TODO: do it later at the end
+static void free_linked_function(LinkedFunction *linked_func){
+
+}
 
 
 /* ----- Codegen "methods" ----- */
@@ -67,7 +126,7 @@ Codegen *init_codegen(void){
     new_codegen->file = fopen(OUTPUT_FILENAME, "w");
     check_nullptr(new_codegen->file, "Codegen: Could not open the output file. \n");
 
-    new_codegen->bracket_depth = 0;
+    new_codegen->functions = NULL;
     new_codegen->temp_var_count = 0;
 
     return new_codegen;
@@ -90,6 +149,8 @@ void run_codegen(Codegen *codegen, ASTNode *ast_root){
 
     LinkedASTNode *statements = ast_root->data.program.statements;
 
+    codegen->functions = gen_function_declarations(codegen, ast_root); // add function declarations + save function data
+
     while (statements != NULL){
         gen_statement(codegen, statements->node);
 
@@ -97,9 +158,51 @@ void run_codegen(Codegen *codegen, ASTNode *ast_root){
     }
 }
 
-// TODO: this
-static void gen_function_declarations(Codegen *codegen, ASTNode *ast_root){
+// generates declarations for all functions and saves data about them in a linked function
+static LinkedFunction *gen_function_declarations(Codegen *codegen, ASTNode *ast_root){
+    LinkedASTNode *statements = ast_root->data.program.statements;
 
+    LinkedFunction *head = NULL;
+    LinkedFunction *tail = NULL;
+
+    while (statements != NULL){
+        if (statements->node->node_type != FUNCTION_NODE){
+            statements = statements->next;
+            continue;
+        }
+
+        ASTNode *function = statements->node;
+
+        // save the functions data for default values
+        LinkedFunction *new_node = init_linked_function(init_function(function));
+
+        if (head == NULL){
+            head = new_node;
+        }
+        else {
+            tail->next = new_node;
+        }
+        tail = new_node;
+
+        // write the declarations
+        gen_type(codegen, function->data.function.return_type_info->type);
+        fprintf(codegen->file, " %s(", function->data.function.name);
+
+        LinkedASTNode *params = function->data.function.params;
+        while (params != NULL){
+            gen_function_param(codegen, params->node);
+            if (params->next != NULL){
+                fprintf(codegen->file, ", ");
+            }
+            params = params->next;
+        }
+
+        fprintf(codegen->file, "); \n");
+
+        statements = statements->next;
+    }
+
+    return head;
 }
 
 // based on the node type, redirects to the specific gen functions
@@ -244,17 +347,7 @@ static void gen_create_var_list(Codegen *codegen, ASTNode *node){
 static void gen_assignment(Codegen *codegen, ASTNode *node){
     // assign to a specific index
     if (node->data.assignment.index_expr != NULL){
-        if (node->data.assignment.assign_op != ASSIGN_TOKEN){
-            print_error("Codegen (line %d): Compound assignment on a list element is not supported. \n", node->line);
-        }
-
-        fprintf(codegen->file, "list_set(%s, ", node->data.assignment.name);
-        gen_expression(codegen, node->data.assignment.index_expr);
-        fprintf(codegen->file, ", ");
-        gen_box_item(codegen, node->data.assignment.value->type_info->type, node->data.assignment.value);
-        fprintf(codegen->file, "); \n");
-
-        return;
+        return gen_assignment_index_expr(codegen, node);
     }
 
     // assign a list
@@ -266,6 +359,70 @@ static void gen_assignment(Codegen *codegen, ASTNode *node){
     fprintf(codegen->file, "%s %s ", node->data.assignment.name, op_to_c_string(node->data.assignment.assign_op));
     gen_expression(codegen, node->data.assignment.value);
     fprintf(codegen->file, "; \n");
+}
+
+// assigning stuff to an index in a list is complicated
+static void gen_assignment_index_expr(Codegen *codegen, ASTNode *node){
+    Type elem_type = node->data.assignment.value->type_info->type;
+
+    // plain assignment: list_set(xs, i, box_x(value))
+    if (node->data.assignment.assign_op == ASSIGN_TOKEN){
+        fprintf(codegen->file, "list_set(%s, ", node->data.assignment.name);
+        gen_expression(codegen, node->data.assignment.index_expr);
+        fprintf(codegen->file, ", ");
+        gen_box_item(codegen, elem_type, node->data.assignment.value);
+        fprintf(codegen->file, "); \n");
+
+        return;
+    }
+
+    // compound assignment (+=, -=, etc) is complicated
+    // the index is stored in a temp so it only gets evaluated once
+    // becomes: { int _idx = <index>; list_set(xs, _idx, box_x(unbox_x(list_get(xs, _idx)) <op> <value>)); }
+    int id_num = codegen->temp_var_count++;
+
+    fprintf(codegen->file, "{ \n"); // open temp block
+
+    fprintf(codegen->file, "int _idx%d = ", id_num);
+    gen_expression(codegen, node->data.assignment.index_expr);
+    fprintf(codegen->file, "; \n");
+
+    char index_name[TEMP_NAME_SIZE]; // the temp's name, to pass to gen_unbox_item
+    snprintf(index_name, TEMP_NAME_SIZE, "_idx%d", id_num);
+
+    fprintf(codegen->file, "list_set(%s, _idx%d, ", node->data.assignment.name, id_num);
+
+    // box the whole (old_value <op> new_value) expression
+    switch(elem_type){
+        case TYPE_INT:    
+            fprintf(codegen->file, "box_int(");   
+            break;
+
+        case TYPE_FLOAT:  
+            fprintf(codegen->file, "box_float("); 
+            break;
+
+        case TYPE_CHAR:   
+            fprintf(codegen->file, "box_char(");  
+            break;
+
+        default:
+            print_error("Codegen (line %d): Compound assignment cannot be used on this element type. \n", node->line);
+    }
+
+    // the old value, unboxed
+    gen_unbox_item(codegen, elem_type, node->data.assignment.name, index_name, NULL);
+
+    // the operator, without its "=" part (+= becomes +)
+    fprintf(codegen->file, " %s ", op_to_c_string(compound_to_binary_op(node->data.assignment.assign_op)));
+
+    // the new value
+    gen_expression(codegen, node->data.assignment.value);
+
+    fprintf(codegen->file, ")); \n"); // close box_x and list_set
+    fprintf(codegen->file, "} \n");   // close temp block
+    
+    return;
 }
 
 // deletes the contents of an existing list and assigns new ones from scratch
@@ -382,7 +539,7 @@ static void gen_repeat_on(Codegen *codegen, ASTNode *node){
     gen_type(codegen, node->type_info->type);
     fprintf(codegen->file, " %s = ", node->data.repeat_on.var_name);
 
-    char index_name[32]; // build the index name "_i%d" to pass as the index to the gen_unbox function
+    char index_name[TEMP_NAME_SIZE]; // build the index name "_i%d" to pass as the index to the gen_unbox function
     snprintf(index_name, sizeof(index_name), "_i%d", id_num);
 
     gen_unbox_item(codegen, node->type_info->type, node->data.repeat_on.list_name, index_name, NULL);
@@ -438,28 +595,33 @@ static void gen_skip(Codegen *codegen, ASTNode *node){
 
 
 /* ----- Expression generation functions ----- */
-// TODO: handle built in function calls
-// TODO: handle default values. need to keep track of all function declarations and add it in call site.
 static void gen_function_call(Codegen *codegen, ASTNode *node){
-    if (!gen_built_in_prefix(codegen, node)){
-        if (gen_built_in_call(codegen, node)){ // did full call
-            return;
-        }
-
-        fprintf(codegen->file, "%s(", node->data.function_call.name);
+    if (gen_built_in_call(codegen, node)){
+        return;
     }
 
+    fprintf(codegen->file, "%s(", node->data.function_call.name);
+ 
     // arguments
-    LinkedASTNode *args = node->data.function_call.params;
+    LinkedASTNode *args = node->data.function_call.args;
+    LinkedASTNode *params = get_function_params(codegen, node->data.function_call.name, node->line);
 
-    while (args != NULL){
-        gen_expression(codegen, args->node);
+    while (params != NULL){
+        if (args == NULL){ // param exists but arg doesnt. add default value
+            gen_expression(codegen, params->node->data.function_param.default_val);
+        }
+        else {
+            gen_expression(codegen, args->node);
+        }
         
-        if (args->next != NULL){
+        if (params->next != NULL){
             fprintf(codegen->file, ", ");
         }
 
-        args = args->next;
+        if (args != NULL){
+            args = args->next;  
+        }
+        params = params->next;
     }
 
     fprintf(codegen->file, ")");
@@ -518,13 +680,13 @@ static void gen_literal(Codegen *codegen, ASTNode *node){
         return gen_list_literal(codegen, node); // shouldnt even get here...
     }
 
-    // char. add quotes ' //? might need to handle escape char stuff here
+    // char. add quotes '
     if (node->data.literal.type == TYPE_CHAR){
         fprintf(codegen->file, "\'%s\'", node->data.literal.value);
         return;
     }
 
-    // string. add qoutes " //? might need to handle escape char stuff here
+    // string. add quotes "
     if (node->data.literal.type == TYPE_STRING){
         fprintf(codegen->file, "\"%s\"", node->data.literal.value);
         return;
@@ -573,44 +735,77 @@ static void gen_list_literal(Codegen *codegen, ASTNode *node){
 
 
 /* ----- Builtin generation functions ----- */
-static bool gen_built_in_prefix(Codegen *codegen, ASTNode *node){
+// call the corresponding built_in_X function. if it was a prefix then write the remaining stuff
+static bool gen_built_in_call(Codegen *codegen, ASTNode *node){
     char *function_name = node->data.function_call.name;
+    bool is_prefix = false;
 
+    // only prefix
     if (strcmp(function_name, "random") == 0){
         fprintf(codegen->file, "ting_random(");
-        return true;
+        is_prefix = true;
     }
 
     if (strcmp(function_name, "length") == 0){
         gen_length_prefix(codegen, node);
-        return true;
+        is_prefix = true;
     }
 
     if (strcmp(function_name, "to_int") == 0){
         gen_to_int_prefix(codegen, node);
-        return true;
+        is_prefix = true;
     }
 
     if (strcmp(function_name, "to_float") == 0){
         gen_to_float_prefix(codegen, node);
-        return true;
+        is_prefix = true;
     }
 
     if (strcmp(function_name, "to_char") == 0){
         gen_to_char_prefix(codegen, node);
-        return true;
+        is_prefix = true;
     }
 
     if (strcmp(function_name, "to_string") == 0){
         gen_to_string_prefix(codegen, node);
+        is_prefix = true;
+    }
+
+    // full call
+    if (strcmp(function_name, "add") == 0){
+        gen_add_call(codegen, node);
         return true;
     }
 
-    return false;
+    if (strcmp(function_name, "remove") == 0){
+        gen_remove_call(codegen, node);
+        return true;
+    }
+
+    if (!is_prefix){
+        return false;
+    }
+
+    // only wrote prefix, need to write remaining call.
+    LinkedASTNode *args = node->data.function_call.args;
+
+    while (args != NULL){
+        gen_expression(codegen, args->node);
+        
+        if (args->next != NULL){
+            fprintf(codegen->file, ", ");
+        }
+
+        args = args->next;
+    }
+
+    fprintf(codegen->file, ")");
+
+    return true;
 }
 
 static void gen_length_prefix(Codegen *codegen, ASTNode *node){
-    ASTNode *param = node->data.function_call.params->node;
+    ASTNode *param = node->data.function_call.args->node;
     
     switch(param->type_info->type){
         case TYPE_STRING:
@@ -627,7 +822,7 @@ static void gen_length_prefix(Codegen *codegen, ASTNode *node){
 }
 
 static void gen_to_int_prefix(Codegen *codegen, ASTNode *node){
-    ASTNode *arg = node->data.function_call.params->node;
+    ASTNode *arg = node->data.function_call.args->node;
 
     switch(arg->type_info->type){
         case TYPE_INT:
@@ -645,7 +840,7 @@ static void gen_to_int_prefix(Codegen *codegen, ASTNode *node){
 }
 
 static void gen_to_float_prefix(Codegen *codegen, ASTNode *node){
-    ASTNode *arg = node->data.function_call.params->node;
+    ASTNode *arg = node->data.function_call.args->node;
 
     switch(arg->type_info->type){
         case TYPE_INT:
@@ -663,7 +858,7 @@ static void gen_to_float_prefix(Codegen *codegen, ASTNode *node){
 }
 
 static void gen_to_char_prefix(Codegen *codegen, ASTNode *node){
-    ASTNode *arg = node->data.function_call.params->node;
+    ASTNode *arg = node->data.function_call.args->node;
 
     switch(arg->type_info->type){
         case TYPE_INT:
@@ -680,7 +875,7 @@ static void gen_to_char_prefix(Codegen *codegen, ASTNode *node){
 }
 
 static void gen_to_string_prefix(Codegen *codegen, ASTNode *node){
-    ASTNode *arg = node->data.function_call.params->node;
+    ASTNode *arg = node->data.function_call.args->node;
 
     switch(arg->type_info->type){
         case TYPE_INT:    fprintf(codegen->file, "int_to_string(");   break;
@@ -697,25 +892,9 @@ static void gen_to_string_prefix(Codegen *codegen, ASTNode *node){
     }
 }
 
-static bool gen_built_in_call(Codegen *codegen, ASTNode *node){
-    char *function_name = node->data.function_call.name;
-
-    if (strcmp(function_name, "add") == 0){
-        gen_add_call(codegen, node);
-        return true;
-    }
-
-    if (strcmp(function_name, "remove") == 0){
-        gen_remove_call(codegen, node);
-        return true;
-    }
-
-    return false;
-}
-
 static void gen_add_call(Codegen *codegen, ASTNode *node){
-    ASTNode *list_arg  = get_arg(node->data.function_call.params, 0);
-    ASTNode *value_arg = get_arg(node->data.function_call.params, 1);
+    ASTNode *list_arg  = get_arg(node->data.function_call.args, 0);
+    ASTNode *value_arg = get_arg(node->data.function_call.args, 1);
 
     fprintf(codegen->file, "list_add(");
     gen_expression(codegen, list_arg);
@@ -728,8 +907,8 @@ static void gen_add_call(Codegen *codegen, ASTNode *node){
 }
 
 static void gen_remove_call(Codegen *codegen, ASTNode *node){
-    ASTNode *list_arg  = get_arg(node->data.function_call.params, 0);
-    ASTNode *index_arg = get_arg(node->data.function_call.params, 1);
+    ASTNode *list_arg  = get_arg(node->data.function_call.args, 0);
+    ASTNode *index_arg = get_arg(node->data.function_call.args, 1);
 
     fprintf(codegen->file, "list_remove(");
     gen_expression(codegen, list_arg);
@@ -905,6 +1084,20 @@ static const char *op_to_c_string(TokenType operator){
         default:
             print_error("Codegen: no C operator for token %d. \n", operator);
             return NULL;
+    }
+}
+
+static TokenType compound_to_binary_op(TokenType op){
+    switch(op){
+        case ADD_TO_TOKEN:    return PLUS_TOKEN;
+        case SUB_TO_TOKEN:    return MINUS_TOKEN;
+        case MULT_TO_TOKEN:   return MULT_TOKEN;
+        case DIVIDE_TO_TOKEN: return DIVIDE_TOKEN;
+        case MOD_TO_TOKEN:    return MODULO_TOKEN;
+
+        default:
+            print_error("Codegen: token %d is not a compound assignment operator. \n", op);
+            return op;
     }
 }
 

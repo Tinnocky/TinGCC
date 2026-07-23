@@ -904,7 +904,7 @@ static TypeInfo *analyze_function_call(Context *context, ASTNode *node){
     Symbol *function = expect_symbol(context, node->data.function_call.name, SYMBOL_FUNC, node->line);
 
     ParamInfo *curr_parameter = function->data.func.params;
-    LinkedASTNode *curr_argument = node->data.function_call.params;
+    LinkedASTNode *curr_argument = node->data.function_call.args;
     int arg_index = 1; // used for the error message
 
     // check if all parameters and arguments match, none are missed
@@ -1135,7 +1135,7 @@ static bool if_always_returns(ASTNode *node){
 /* ----- Builtin functions ----- */
 // random(int min, int max)
 static TypeInfo *analyze_random_call(Context *context, ASTNode *node){
-    LinkedASTNode *args = node->data.function_call.params;
+    LinkedASTNode *args = node->data.function_call.args;
 
     if (get_arg(args, 0) == NULL || get_arg(args, 1) == NULL){
         print_error("Analysis (line %d): random() requires 2 arguments. \n", node->line);
@@ -1154,7 +1154,7 @@ static TypeInfo *analyze_random_call(Context *context, ASTNode *node){
 
 // length(list or string x)
 static TypeInfo *analyze_length_call(Context *context, ASTNode *node){
-    LinkedASTNode *args = node->data.function_call.params;
+    LinkedASTNode *args = node->data.function_call.args;
 
     if (get_arg(args, 0) == NULL){
         print_error("Analysis (line %d): length() requires 1 argument. \n", node->line);
@@ -1172,7 +1172,7 @@ static TypeInfo *analyze_length_call(Context *context, ASTNode *node){
 
 // add(list, list->inner val)
 static TypeInfo *analyze_add_call(Context *context, ASTNode *node){
-    LinkedASTNode *args = node->data.function_call.params;
+    LinkedASTNode *args = node->data.function_call.args;
 
     if (get_arg(args, 0) == NULL || get_arg(args, 1) == NULL){
         print_error("Analysis (line %d): add() requires 2 arguments. \n", node->line);
@@ -1195,7 +1195,7 @@ static TypeInfo *analyze_add_call(Context *context, ASTNode *node){
 
 // remove(list, int index)
 static TypeInfo *analyze_remove_call(Context *context, ASTNode *node){
-    LinkedASTNode *args = node->data.function_call.params;
+    LinkedASTNode *args = node->data.function_call.args;
 
     if (get_arg(args, 0) == NULL || get_arg(args, 1) == NULL){
         print_error("Analysis (line %d): remove() requires 2 arguments. \n", node->line);
@@ -1218,7 +1218,7 @@ static TypeInfo *analyze_remove_call(Context *context, ASTNode *node){
 
 // to_int(x)
 static TypeInfo *analyze_to_int_call(Context *context, ASTNode *node){
-    LinkedASTNode *args = node->data.function_call.params;
+    LinkedASTNode *args = node->data.function_call.args;
 
     if (get_arg(args, 0) == NULL){
         print_error("Analysis (line %d): to_int() requires 1 argument. \n", node->line);
@@ -1236,7 +1236,7 @@ static TypeInfo *analyze_to_int_call(Context *context, ASTNode *node){
 
 // to_float(x)
 static TypeInfo *analyze_to_float_call(Context *context, ASTNode *node){
-    LinkedASTNode *args = node->data.function_call.params;
+    LinkedASTNode *args = node->data.function_call.args;
 
     if (get_arg(args, 0) == NULL){
         print_error("Analysis (line %d): to_float() requires 1 argument. \n", node->line);
@@ -1254,7 +1254,7 @@ static TypeInfo *analyze_to_float_call(Context *context, ASTNode *node){
 
 // to_char(x)
 static TypeInfo *analyze_to_char_call(Context *context, ASTNode *node){
-    LinkedASTNode *args = node->data.function_call.params;
+    LinkedASTNode *args = node->data.function_call.args;
 
     if (get_arg(args, 0) == NULL){
         print_error("Analysis (line %d): to_char() requires 1 argument. \n", node->line);
@@ -1272,7 +1272,7 @@ static TypeInfo *analyze_to_char_call(Context *context, ASTNode *node){
 
 // to_string(x)
 static TypeInfo *analyze_to_string_call(Context *context, ASTNode *node){
-    LinkedASTNode *args = node->data.function_call.params;
+    LinkedASTNode *args = node->data.function_call.args;
 
     if (get_arg(args, 0) == NULL){
         print_error("Analysis (line %d): to_string() requires 1 argument. \n", node->line);

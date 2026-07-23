@@ -13,7 +13,7 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/parser.c \
        $(SRC_DIR)/utils.c \
        $(SRC_DIR)/testing.c \
-       $(SRC_DIR)/analysis.c
+//       $(SRC_DIR)/analysis.c
 
 # what files build what and where
 OBJS = $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/src/%.o, $(SRCS))
@@ -38,8 +38,8 @@ test_lexer:
 test_parser:
 	@bash testing/parser/test.sh
 
-test_analysis:
-	@bash testing/analysis/test.sh
+// test_analysis:
+//	@bash testing/analysis/test.sh
 
 
 # clean
@@ -47,5 +47,5 @@ clean:
 	rm -rf $(BUILD_DIR)
 
 
-.PHONY: all clean test_lexer test_parser test_analysis
+.PHONY: all clean test_lexer test_parser //test_analysis
 -include $(OBJS:.o=.d)

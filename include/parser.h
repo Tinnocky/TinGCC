@@ -105,7 +105,7 @@ struct ASTNode {
 
         struct { 
             char *name; 
-            LinkedASTNode *params; // a list of expressions
+            LinkedASTNode *args; // a list of expressions
         } function_call;
 
 
@@ -117,8 +117,7 @@ struct ASTNode {
         } create_var;
 
         struct {
-            char *name; // name of an identifier
-            ASTNode *index_expr; // optional, for assigning value to a list
+            ASTNode *target; // list being indexed (identifier) or an index node for list holding a list, etc
             TokenType assign_op; // such as =, +=, *=, ...
             ASTNode *value; // literal or arithmetic
         } assignment;
@@ -150,7 +149,7 @@ struct ASTNode {
 
         struct { 
             char *var_name;
-            char *list_name;
+            ASTNode *target;
             LinkedASTNode *body;  // list of statements
         } repeat_on;
 
@@ -186,11 +185,11 @@ struct ASTNode {
         } unary;
 
         struct {
-            char *list_name; // list being indexed
+            ASTNode *target; // list being indexed (identifier) or an index node for list holding a list, etc
             ASTNode *index_expr; // the expression inside the brackets (the index itself)
         } index;
 
-        struct { // Note: this is only used in parse_atom because it has to return a plain identifier and has to return an *ASTNode
+        struct {
             char *name; 
         } identifier;
 

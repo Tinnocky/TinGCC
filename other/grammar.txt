@@ -31,7 +31,7 @@
 
 (* ---------- Types ---------- *)
 
-<type>   ::= <scalar> <list_suffix>*
+<type>        ::= <scalar> <list_suffix>*
 <scalar>      ::= "int" | "float" | "char" | "string" | "bool"
 <list_suffix> ::= "list"
 
@@ -55,7 +55,9 @@
 <say>         ::= "say" <expr> "\n"
 <return>      ::= "return" <expr>? "\n"
 
-<lvalue>      ::= IDENTIFIER ( "[" <expr> "]" )?
+(* an lvalue is any postfix expression, though only identifiers and *)
+(* indexed expressions are actually assignable (checked in analysis) *)
+<lvalue>      ::= <postfix>
 <assign_op>   ::= "=" | "+=" | "-=" | "*=" | "/=" | "%="
 
 
@@ -72,7 +74,7 @@
 
 <repeat>      ::= "repeat" "(" IDENTIFIER "," <expr> "to" <expr> ( "," "step" <expr> )? ")" "start" ":" <statement>* "end"
 
-<repeat_on>   ::= "repeat" "on" "(" IDENTIFIER "in" IDENTIFIER ")" "start" ":" <statement>* "end"
+<repeat_on>   ::= "repeat" "on" "(" IDENTIFIER "in" <postfix> ")" "start" ":" <statement>* "end"
 
 
 (* ---------- Boolean expressions ---------- *)
@@ -83,23 +85,24 @@
                 | <or>
 <or>          ::= <and> ( "or" <and> )*
 <and>         ::= <cmp> ( "and" <cmp> )*
-<cmp>         ::= "(" <bool> ")"
-                | <expr> <cmp_op> <expr>
+<cmp>         ::= <expr> ( <cmp_op> <expr> )?
 <cmp_op>      ::= "is" | "more" "than" | "less" "than"
 
 
 (* ---------- Arithmetic expressions ---------- *)
+(* indexing is a postfix operator, so it applies to any primary:  *)
+(* xs[i], xs[i][j], foo()[0], [1,2,3][0], (expr)[0] all parse     *)
 
 <input>       ::= "input" <scalar>
 <expr>        ::= <term> ( ( "+" | "-" ) <term> )*
 <term>        ::= <factor> ( ( "*" | "/" | "%" ) <factor> )*
 <factor>      ::= "-" <factor>
-                | <atom>
-<atom>        ::= <call>
-                | IDENTIFIER "[" <expr> "]"
+                | <postfix>
+<postfix>     ::= <primary> ( "[" <expr> "]" )*
+<primary>     ::= <call>
                 | IDENTIFIER
                 | <literal>
-                | "(" <expr> ")"
+                | "(" <bool> ")"
                 | <input>
 
 <call>        ::= IDENTIFIER "(" <args> ")"
@@ -123,11 +126,12 @@
 (*    IDENTIFIER     letter or '_', then letters/digits/'_'           *)
 (*    INT_LITERAL    one or more digits                               *)
 (*    FLOAT_LITERAL  digits '.' (digits)?                             *)
-(*    STRING_LITERAL "..." or '...'  with 2+ chars  (lexer rule)      *)
-(*    CHAR_LITERAL   "x" or 'x'      with 0-1 chars (lexer rule)      *)
+(*    STRING_LITERAL "..."  (double quotes)                           *)
+(*    CHAR_LITERAL   '...'  (single quotes, one character)            *)
 (*                                                                    *)
-(*  ('...' and "..." are interchangeable in source; the lexer chooses *)
-(*   STRING vs CHAR by length, not by which quote was used.)          *)
+(*  The lexer chooses STRING vs CHAR by which quote was used, not by  *)
+(*  length. Escape sequences are stored raw (backslash + character)   *)
+(*  and are interpreted later by the C compiler.                      *)
 (* ================================================================== *)
 
 

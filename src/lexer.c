@@ -256,7 +256,6 @@ static void skip_unnecessary(Lexer *lexer){
 
 // reads the next token if its in between quotes (a string or character literal) into **token_string
 // returns the quote type
-// Note: the first check for \n is if for enter was pressed between the string, second is if "\n" was typed (then the string should format)
 static char read_string_literal(Lexer *lexer, char **token_string, int *token_length, int *token_size){
     // first character has to be a quote or continuation of an interp string
     if (lexer->interp_quote_type == '\0') {
@@ -295,30 +294,18 @@ static char read_string_literal(Lexer *lexer, char **token_string, int *token_le
             return (*token_length > 0) ? lexer->interp_quote_type : '\0';
         }
 
-        // handling escape sequences written into the string
+        // escape sequence. store the backslash and whatever follows it verbatim,
+        // so an escaped quote doesnt end the string. C interprets these later
         else if (lexer->current_char == '\\'){
+            (*token_string)[(*token_length)++] = '\\';
+            realloc_check(token_string, token_length, token_size);
             advance(lexer);
 
-            switch (lexer->current_char){
-                case EOF:
-                    print_error("Lexer (line %d): string left unterminated until EOF. \n", lexer->line);
-                    return '\0';
-
-                case 'n':
-                    (*token_string)[(*token_length)++] = '\n';
-                    break;
-
-                case 't':
-                    (*token_string)[(*token_length)++] = '\t';
-                    break;
-
-                default: // unknown escape sequence, keep backslash and add next character
-                    (*token_string)[(*token_length)++] = '\\';
-                    realloc_check(token_string, token_length, token_size);
-                    (*token_string)[(*token_length)++] = lexer->current_char;
-                    break;
+            if (lexer->current_char == EOF){
+                print_error("Lexer (line %d): string left unterminated until EOF. \n", lexer->line);
             }
 
+            (*token_string)[(*token_length)++] = lexer->current_char;
             realloc_check(token_string, token_length, token_size);
             advance(lexer);
 
@@ -338,9 +325,14 @@ static char read_string_literal(Lexer *lexer, char **token_string, int *token_le
 
     (*token_string)[*token_length] = '\0';
 
-    // single quotes can only hold one character
-    if (quote_type == '\'' && *token_length > 1){
-        print_error("Lexer (line %d): Character literal cannot hold more than one character. \n", lexer->line);
+    // single quotes can only hold one character.
+    // an escape sequence is 2 stored characters but still one logical character
+    if (quote_type == '\''){
+        bool is_escape = (*token_length == 2 && (*token_string)[0] == '\\');
+
+        if (*token_length > 1 && !is_escape){
+            print_error("Lexer (line %d): Character literal cannot hold more than one character. \n", lexer->line);
+        }
     }
 
     return (*token_length > 0) ? quote_type : '\0';

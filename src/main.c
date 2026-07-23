@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include "../include/lexer.h"
 #include "../include/parser.h"
-#include "../include/analysis.h"
+// #include "../include/analysis.h"
 #include "../include/utils.h"
 #include "../include/testing.h"
 
@@ -49,6 +49,7 @@ static void run_parser_test(char *filename){
     free_lexer(lexer);
 }
 
+/*
 static void run_analysis_test(char *filename){
 Lexer *lexer = init_lexer(filename);
     TokenNode *tokens_head = run_lexer(lexer);
@@ -67,6 +68,7 @@ Lexer *lexer = init_lexer(filename);
     free_tokens_list(tokens_head);
     free_lexer(lexer);
 }
+    */
 
 
 int main(int argc, char *argv[]){
@@ -76,8 +78,8 @@ int main(int argc, char *argv[]){
 
     // which test to run...
     // run_lexer_test(filename);
-    // run_parser_test(filename);
-    run_analysis_test(filename);
+    run_parser_test(filename);
+    // run_analysis_test(filename);
 
     return 0;
 }

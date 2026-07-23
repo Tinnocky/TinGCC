@@ -239,7 +239,7 @@ static void print_ast_node(ASTNode *node, const char *prefix, bool is_last) {
         case FUNCTION_CALL_NODE:
             printf("%s├─ name: '%s'\n", child_prefix, node->data.function_call.name);
             printf("%s└─ args:\n", child_prefix);
-            print_linked_list(node->data.function_call.params, label_end);
+            print_linked_list(node->data.function_call.args, label_end);
             break;
 
         case CREATE_VAR_NODE:
@@ -258,14 +258,9 @@ static void print_ast_node(ASTNode *node, const char *prefix, bool is_last) {
             break;
 
         case ASSIGNMENT_NODE:
-            printf("%s├─ name: '%s'\n", child_prefix, node->data.assignment.name);
-            if (node->data.assignment.index_expr) {
-                printf("%s├─ op: %s\n", child_prefix, token_type_to_string(node->data.assignment.assign_op));
-                printf("%s├─ index:\n", child_prefix);
-                print_ast_node(node->data.assignment.index_expr, label_mid, true);
-            } else {
-                printf("%s├─ op: %s\n", child_prefix, token_type_to_string(node->data.assignment.assign_op));
-            }
+            printf("%s├─ target:\n", child_prefix);
+            print_ast_node(node->data.assignment.target, label_mid, true);
+            printf("%s├─ op: %s\n", child_prefix, token_type_to_string(node->data.assignment.assign_op));
             printf("%s└─ value:\n", child_prefix);
             print_ast_node(node->data.assignment.value, label_end, true);
             break;
@@ -320,7 +315,8 @@ static void print_ast_node(ASTNode *node, const char *prefix, bool is_last) {
 
         case REPEAT_ON_NODE:
             printf("%s├─ var: '%s'\n", child_prefix, node->data.repeat_on.var_name);
-            printf("%s├─ list: '%s'\n", child_prefix, node->data.repeat_on.list_name);
+            printf("%s├─ list:\n", child_prefix);
+            print_ast_node(node->data.repeat_on.target, label_mid, true);
             printf("%s└─ body:\n", child_prefix);
             print_linked_list(node->data.repeat_on.body, label_end);
             break;
@@ -362,7 +358,8 @@ static void print_ast_node(ASTNode *node, const char *prefix, bool is_last) {
             break;
 
         case INDEX_NODE:
-            printf("%s├─ list: '%s'\n", child_prefix, node->data.index.list_name);
+            printf("%s├─ target:\n", child_prefix);
+            print_ast_node(node->data.index.target, label_mid, true);
             printf("%s└─ index:\n", child_prefix);
             print_ast_node(node->data.index.index_expr, label_end, true);
             break;

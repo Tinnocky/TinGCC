@@ -23,7 +23,6 @@ static bool skip_consecutive_newlines(Parser *parser, TokenType stop_token, Toke
 
 /* ----- "Main" Parsing functions (that mostly redirect to other parsing functions) ----- */
 static ASTNode *parse_statement(Parser *parser);
-static ASTNode *parse_identifier_statement(Parser *parser);
 
 /* ----- Parsing statement functions (that parse one full statement) ----- */
 static ASTNode *parse_function(Parser *parser);
@@ -46,7 +45,8 @@ static ASTNode *parse_input(Parser *parser);
 static ASTNode *parse_expression(Parser *parser);
 static ASTNode *parse_term(Parser *parser);
 static ASTNode *parse_factor(Parser *parser);
-static ASTNode *parse_atom(Parser *parser);
+static ASTNode *parse_postfix(Parser *parser);
+static ASTNode *parse_primary(Parser *parser);
 static ASTNode *parse_bool(Parser *parser);
 static ASTNode *parse_or(Parser *parser);
 static ASTNode *parse_and(Parser *parser);
@@ -128,7 +128,7 @@ void free_ast(ASTNode *ast_node){
         
         case FUNCTION_CALL_NODE:
             free(ast_node->data.function_call.name);
-            free_linked_ast(ast_node->data.function_call.params);
+            free_linked_ast(ast_node->data.function_call.args);
             break;
 
         case CREATE_VAR_NODE:
@@ -140,10 +140,7 @@ void free_ast(ASTNode *ast_node){
             break;
 
         case ASSIGNMENT_NODE:
-            free(ast_node->data.assignment.name);
-            if (ast_node->data.assignment.index_expr){ // optional
-                free_ast(ast_node->data.assignment.index_expr);
-            }
+            free_ast(ast_node->data.assignment.target);
             free_ast(ast_node->data.assignment.value);
             break;
 
@@ -179,7 +176,7 @@ void free_ast(ASTNode *ast_node){
 
         case REPEAT_ON_NODE:
             free(ast_node->data.repeat_on.var_name);
-            free(ast_node->data.repeat_on.list_name);
+            free_ast(ast_node->data.repeat_on.target);
             free_linked_ast(ast_node->data.repeat_on.body);
             break;
 
@@ -212,7 +209,7 @@ void free_ast(ASTNode *ast_node){
             break;
 
         case INDEX_NODE:
-            free(ast_node->data.index.list_name);
+            free_ast(ast_node->data.index.target);
             free_ast(ast_node->data.index.index_expr);
             break;
 
@@ -384,7 +381,12 @@ static ASTNode *parse_statement(Parser *parser){
 
         // function call or variable assignment
         case IDENTIFIER_TOKEN:
-            return parse_identifier_statement(parser);
+            if (next_type(parser) == OPEN_PAREN_TOKEN){
+                return parse_function_call(parser);
+            }
+            else {
+                return parse_assignment(parser);
+            }
 
         // variable creation
         case CREATE_TOKEN:
@@ -431,31 +433,6 @@ static ASTNode *parse_statement(Parser *parser){
     return NULL;
 }
 
-// redirect to parsing functions that start with an identifier
-// function call or variable assignment
-static ASTNode *parse_identifier_statement(Parser *parser){
-    switch(next_type(parser)){
-        // function call
-        case OPEN_PAREN_TOKEN:
-            return parse_function_call(parser);
-
-        // variable assignment
-        case ASSIGN_TOKEN:
-        case ADD_TO_TOKEN:
-        case SUB_TO_TOKEN:
-        case MULT_TO_TOKEN:
-        case DIVIDE_TO_TOKEN:
-        case MOD_TO_TOKEN:
-        case OPEN_BRACKET_TOKEN:
-            return parse_assignment(parser);
-
-        default:
-            print_error("Parser (line %d): Got token %d, but didn't expect it. \n", current_line(parser), next_type(parser));
-    }
-
-    return NULL;
-}
-
 
 /* ----- Parsing statement functions (that parse one full statement) ----- */
 // <func_def>    ::= <ret_type> IDENTIFIER ( "with" "[" <params> "]" )? "start" ":" <statement>* "end"
@@ -465,7 +442,7 @@ static ASTNode *parse_function(Parser *parser){
     new_node->data.function.return_type_info = parse_type(parser, true); // is_function = true
     new_node->data.function.name = parse_identifier(parser);
 
-    // with [ params ] (optional)
+    // with[] (optional)
     if (expect_optional(parser, WITH_TOKEN)){
         expect_must(parser, OPEN_BRACKET_TOKEN);
 
@@ -508,13 +485,13 @@ static ASTNode *parse_function_call(Parser *parser){
     expect_must(parser, OPEN_PAREN_TOKEN);
 
     // args (optional)
-    LinkedASTNode *args_tail = new_node->data.function_call.params; // tail is head as of start
+    LinkedASTNode *args_tail = new_node->data.function_call.args; // tail is head as of start
 
     while(current_type(parser) != CLOSE_PAREN_TOKEN){
         LinkedASTNode *linked_arg = init_linked_ast(parse_expression(parser));
 
-        if (new_node->data.function_call.params == NULL){ // for first arg
-            new_node->data.function_call.params = linked_arg;
+        if (new_node->data.function_call.args == NULL){ // for first arg
+            new_node->data.function_call.args = linked_arg;
         }
         else {
             args_tail->next = linked_arg;
@@ -560,16 +537,14 @@ static ASTNode *parse_create_var(Parser *parser){
 
 // parse an assignment statement (could be =, +=, *=, ...)
 // <assign>      ::= <lvalue> <assign_op> <expr> "\n"
-// <lvalue>      ::= IDENTIFIER ( "[" <expr> "]" )?
+// <lvalue>      ::= <postfix>
 static ASTNode *parse_assignment(Parser *parser){
     ASTNode *new_node = init_ast_node(ASSIGNMENT_NODE, current_line(parser));
+    new_node->data.assignment.target = parse_postfix(parser); // will either return an index node or identifier node
 
-    new_node->data.assignment.name = parse_identifier(parser);
-
-    // optional index expression (inside the lvalue)
-    if (expect_optional(parser, OPEN_BRACKET_TOKEN)){
-        new_node->data.assignment.index_expr = parse_expression(parser);
-        expect_must(parser, CLOSE_BRACKET_TOKEN);
+    if (new_node->data.assignment.target->node_type != IDENTIFIER_NODE &&
+        new_node->data.assignment.target->node_type != INDEX_NODE){
+            print_error("Parser (line %d): Can only assign to an identifier. \n", current_line(parser));
     }
 
     // assign op
@@ -695,7 +670,7 @@ static ASTNode *parse_repeat(Parser *parser){
 }
 
 // parse a repeat_on statement specifically
-// <repeat_on>   ::= "repeat" "on" "(" IDENTIFIER "in" IDENTIFIER ")" "start" ":" <statement>* "end"
+// <repeat_on>   ::= "repeat" "on" "(" IDENTIFIER "in" <postfix> ")" "start" ":" <statement>* "end"
 static ASTNode *parse_repeat_on(Parser *parser){
     ASTNode *new_node = init_ast_node(REPEAT_ON_NODE, current_line(parser));
 
@@ -704,7 +679,7 @@ static ASTNode *parse_repeat_on(Parser *parser){
     expect_must(parser, OPEN_PAREN_TOKEN);
     new_node->data.repeat_on.var_name = parse_identifier(parser);
     expect_must(parser, IN_TOKEN);
-    new_node->data.repeat_on.list_name = parse_identifier(parser);
+    new_node->data.repeat_on.target = parse_postfix(parser); // could be either a list or a list list (with index)
     expect_must(parser, CLOSE_PAREN_TOKEN);
     new_node->data.repeat_on.body = parse_full_scope(parser);
     
@@ -912,11 +887,13 @@ static ASTNode *parse_term(Parser *parser){
     return left_val; // despite the name, keeps the whole thing
 }
 
-// parses a factor with unary before it (goes recursivee) or just a regular atom
-// <factor>      ::= "-" <factor> | <atom>
+// parses a factor with unary before it (goes recursivee) or just a regular postfix
+// <factor>      ::= "-" <factor> | <postfix>
 static ASTNode *parse_factor(Parser *parser){
+    int expr_line = current_line(parser); // get it now because we advance
+
     if (expect_optional(parser, MINUS_TOKEN)){
-        ASTNode *new_node = init_ast_node(UNARY_NODE, current_line(parser));
+        ASTNode *new_node = init_ast_node(UNARY_NODE, expr_line);
 
         new_node->data.unary.op = MINUS_TOKEN;
         new_node->data.unary.operand = parse_factor(parser); // wow...recursion
@@ -924,41 +901,46 @@ static ASTNode *parse_factor(Parser *parser){
         return new_node;
     }
 
-    return parse_atom(parser);
+    return parse_postfix(parser);
 }
 
-// <atom>        ::= <call> | IDENTIFIER "[" <expr> "]" | IDENTIFIER | <literal> | "(" <expr> ")" | <input>
+// <postfix>     ::= <primary> ( "[" <expr> "]" )*
+// Note: each bracket wraps the whole thing built so far, so xs[i][j] nests as index(index(xs, i), j)
+// Note: with no brackets at all this just returns the plain identifier node
+static ASTNode *parse_postfix(Parser *parser){
+    int expr_line = current_line(parser); // get it now because we advance
+
+    ASTNode *current = parse_primary(parser);
+
+    // every bracket wraps what we have so far in a new index node
+    while (expect_optional(parser, OPEN_BRACKET_TOKEN)){
+        ASTNode *new_index = init_ast_node(INDEX_NODE, expr_line);
+
+        new_index->data.index.target = current; // the old thing becomes the target
+        new_index->data.index.index_expr = parse_expression(parser);
+
+        expect_must(parser, CLOSE_BRACKET_TOKEN);
+
+        current = new_index; // the new thing becomes what we have
+    }
+
+    return current;
+}
+
+// <primary>     ::= <call> | IDENTIFIER | <literal> | "(" <bool> ")" | <input>
 // <call>        ::= IDENTIFIER "(" <args> ")"
-static ASTNode *parse_atom(Parser *parser){
+static ASTNode *parse_primary(Parser *parser){
     switch(current_type(parser)){
-        // <call> | IDENTIFIER "[" <expr> "]" | IDENTIFIER
-        case IDENTIFIER_TOKEN:
-            switch(next_type(parser)){
-                // <call> 
-                case OPEN_PAREN_TOKEN:
-                    return parse_function_call(parser);
-
-                // IDENTIFIER "[" <expr> "]" 
-                case OPEN_BRACKET_TOKEN:
-                    ASTNode *new_index = init_ast_node(INDEX_NODE, current_line(parser));
-
-                    new_index->data.index.list_name = parse_identifier(parser);
-                    expect_must(parser, OPEN_BRACKET_TOKEN);
-                    new_index->data.index.index_expr = parse_expression(parser);
-                    expect_must(parser, CLOSE_BRACKET_TOKEN);
-                    
-                    return new_index;
-
-                // plain identifier
-                default:
-                    // Note: this is the only usage for an IDENTIFIER_NODE
-                    // Note: all other functions directly call parse_identifier and store it as a (char *)
-                    ASTNode *new_identifier = init_ast_node(IDENTIFIER_NODE, current_line(parser));
-
-                    new_identifier->data.identifier.name = parse_identifier(parser);
-
-                    return new_identifier;
+        // call or identifier
+        case IDENTIFIER_TOKEN: {
+            if (next_type(parser) == OPEN_PAREN_TOKEN){
+                return parse_function_call(parser);
             }
+
+            ASTNode *new_identifier = init_ast_node(IDENTIFIER_NODE, current_line(parser));
+            new_identifier->data.identifier.name = parse_identifier(parser);
+            return new_identifier;
+        }
  
         // <literal>
         case INTEGER_LITERAL_TOKEN:
@@ -971,20 +953,21 @@ static ASTNode *parse_atom(Parser *parser){
             return parse_literal(parser);
 
         // "(" <expr> ")"
-        case OPEN_PAREN_TOKEN:
+        case OPEN_PAREN_TOKEN: {
             expect_must(parser, OPEN_PAREN_TOKEN);
 
             ASTNode *new_expr = parse_bool(parser);
             expect_must(parser, CLOSE_PAREN_TOKEN);
 
             return new_expr;
+        }
 
         // <input>
         case INPUT_TOKEN:
             return parse_input(parser);
 
         default:
-            print_error("Parser (line %d): Expected an <atom> but got token %d. \n", current_line(parser), current_type(parser));
+            print_error("Parser (line %d): Expected a <primary> but got token %d. \n", current_line(parser), current_type(parser));
     }
 
     return NULL;
@@ -993,8 +976,10 @@ static ASTNode *parse_atom(Parser *parser){
 // parse any logical / comparison expression
 // <bool>        ::= "not" <bool> | <or>
 static ASTNode *parse_bool(Parser *parser){
+    int expr_line = current_line(parser); // get it now because we advance
+
     if (expect_optional(parser, NOT_TOKEN)){
-        ASTNode *new_node = init_ast_node(UNARY_NODE, current_line(parser));
+        ASTNode *new_node = init_ast_node(UNARY_NODE, expr_line);
 
         new_node->data.unary.op = NOT_TOKEN;
         new_node->data.unary.operand = parse_bool(parser); // more recursion!!!
@@ -1051,7 +1036,7 @@ static ASTNode *parse_and(Parser *parser){
     return left_val; // despite the name, keeps the whole thing
 }
 
-// <cmp>         ::= "(" <bool> ")" | <expr> <cmp_op> <expr>
+// <cmp>         ::= <expr> ( <cmp_op> <expr> )?
 // <cmp_op>      ::= "is" | "more" "than" | "less" "than"
 static ASTNode *parse_comparison(Parser *parser){
     int cmp_line = current_line(parser); // get before parsing left_val
