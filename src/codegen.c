@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <string.h>
 #include "../include/analysis.h"
 #include "../include/codegen.h"
@@ -21,9 +22,9 @@ static void gen_expression(Codegen *codegen, ASTNode *expression);
 static void gen_function(Codegen *codegen, ASTNode *node);
 static void gen_create_var(Codegen *codegen, ASTNode *node);
 static void gen_create_var_list(Codegen *codegen, ASTNode *node);
-static void gen_assignment(Codegen *codegen, ASTNode *node); //! need to add multiple indexing
+static void gen_assignment(Codegen *codegen, ASTNode *node);
 static void gen_assignment_index_expr(Codegen *codegen, ASTNode *node);
-static void gen_assignment_list(Codegen *codegen, ASTNode *node); //! need to add multiple indexing
+static void gen_assignment_list(Codegen *codegen, ASTNode *node);
 static void gen_if(Codegen *codegen, ASTNode *node);
 static void gen_else(Codegen *codegen, ASTNode *node);
 static void gen_while(Codegen *codegen, ASTNode *node);
@@ -59,15 +60,14 @@ static void gen_body(Codegen *codegen, LinkedASTNode *statements);
 static void gen_function_param(Codegen *codegen, ASTNode *node);
 static void gen_type(Codegen *codegen, Type type);
 static void gen_box_item(Codegen *codegen, Type type, ASTNode *value);
-static void gen_unbox_item(Codegen *codegen, Type type, const char *list_name, const char *index_name, ASTNode *index_expr);
 static const char *op_to_c_string(TokenType operator);
 static TokenType compound_to_binary_op(TokenType op);
 static const char *type_to_specifier(Type type);
+static const char *box_prefix(Type type);
+static const char *box_suffix(Type type);
+static const char *unbox_prefix(Type type);
+static const char *unbox_suffix(Type type);
 static ASTNode *get_arg(LinkedASTNode *args, unsigned int index);
-
-
-// variable declarations
-#define TEMP_NAME_SIZE 32
 
 
 /* ----- Function "methods" -----*/
@@ -342,33 +342,38 @@ static void gen_create_var_list(Codegen *codegen, ASTNode *node){
 }
 
 // <assign>      ::= <lvalue> <assign_op> <expr> "\n"
-// <lvalue>      ::= IDENTIFIER ( "[" <expr> "]" )?
-// TODO: add multiple indexing (All the way back to parser i believe). do it way later
 static void gen_assignment(Codegen *codegen, ASTNode *node){
-    // assign to a specific index
-    if (node->data.assignment.index_expr != NULL){
+    // assigning into a list element
+    if (node->data.assignment.target->node_type == INDEX_NODE){
         return gen_assignment_index_expr(codegen, node);
     }
 
-    // assign a list
+    // whole-list reassignment
     if (node->data.assignment.value->type_info->type == TYPE_LIST){
         return gen_assignment_list(codegen, node);
     }
 
     // scalar
-    fprintf(codegen->file, "%s %s ", node->data.assignment.name, op_to_c_string(node->data.assignment.assign_op));
+    gen_expression(codegen, node->data.assignment.target);
+    fprintf(codegen->file, " %s ", op_to_c_string(node->data.assignment.assign_op));
     gen_expression(codegen, node->data.assignment.value);
     fprintf(codegen->file, "; \n");
 }
 
 // assigning stuff to an index in a list is complicated
 static void gen_assignment_index_expr(Codegen *codegen, ASTNode *node){
-    Type elem_type = node->data.assignment.value->type_info->type;
+    ASTNode *target = node->data.assignment.target;
+    ASTNode *list = target->data.index.target;
+    ASTNode *index = target->data.index.index_expr;
 
-    // plain assignment: list_set(xs, i, box_x(value))
+    Type elem_type = target->type_info->type; // what the list holds
+
+    // plain assignment: list_set(<list>, <index>, box_x(value))
     if (node->data.assignment.assign_op == ASSIGN_TOKEN){
-        fprintf(codegen->file, "list_set(%s, ", node->data.assignment.name);
-        gen_expression(codegen, node->data.assignment.index_expr);
+        fprintf(codegen->file, "list_set(");
+        gen_expression(codegen, list);
+        fprintf(codegen->file, ", ");
+        gen_expression(codegen, index);
         fprintf(codegen->file, ", ");
         gen_box_item(codegen, elem_type, node->data.assignment.value);
         fprintf(codegen->file, "); \n");
@@ -376,42 +381,34 @@ static void gen_assignment_index_expr(Codegen *codegen, ASTNode *node){
         return;
     }
 
-    // compound assignment (+=, -=, etc) is complicated
-    // the index is stored in a temp so it only gets evaluated once
-    // becomes: { int _idx = <index>; list_set(xs, _idx, box_x(unbox_x(list_get(xs, _idx)) <op> <value>)); }
+    // compound assignment (+=, -=, etc) needs a read-modify-write.
+    // the list and index go into temps so theyre only evaluated once
+    // becomes: { List *_lst = <list>; int _idx = <index>;
+    //            list_set(_lst, _idx, box_x(unbox_x(list_get(_lst, _idx)) <op> <value>)); }
+    if (elem_type == TYPE_STRING || elem_type == TYPE_LIST){
+        print_error("Codegen (line %d): Compound assignment cannot be used on this element type. \n", node->line);
+    }
+
     int id_num = codegen->temp_var_count++;
 
     fprintf(codegen->file, "{ \n"); // open temp block
 
-    fprintf(codegen->file, "int _idx%d = ", id_num);
-    gen_expression(codegen, node->data.assignment.index_expr);
+    fprintf(codegen->file, "List *_lst%d = ", id_num);
+    gen_expression(codegen, list);
     fprintf(codegen->file, "; \n");
 
-    char index_name[TEMP_NAME_SIZE]; // the temp's name, to pass to gen_unbox_item
-    snprintf(index_name, TEMP_NAME_SIZE, "_idx%d", id_num);
+    fprintf(codegen->file, "int _idx%d = ", id_num);
+    gen_expression(codegen, index);
+    fprintf(codegen->file, "; \n");
 
-    fprintf(codegen->file, "list_set(%s, _idx%d, ", node->data.assignment.name, id_num);
+    fprintf(codegen->file, "list_set(_lst%d, _idx%d, ", id_num, id_num);
 
     // box the whole (old_value <op> new_value) expression
-    switch(elem_type){
-        case TYPE_INT:    
-            fprintf(codegen->file, "box_int(");   
-            break;
-
-        case TYPE_FLOAT:  
-            fprintf(codegen->file, "box_float("); 
-            break;
-
-        case TYPE_CHAR:   
-            fprintf(codegen->file, "box_char(");  
-            break;
-
-        default:
-            print_error("Codegen (line %d): Compound assignment cannot be used on this element type. \n", node->line);
-    }
+    fprintf(codegen->file, "%s", box_prefix(elem_type));
 
     // the old value, unboxed
-    gen_unbox_item(codegen, elem_type, node->data.assignment.name, index_name, NULL);
+    fprintf(codegen->file, "%slist_get(_lst%d, _idx%d)%s",
+        unbox_prefix(elem_type), id_num, id_num, unbox_suffix(elem_type));
 
     // the operator, without its "=" part (+= becomes +)
     fprintf(codegen->file, " %s ", op_to_c_string(compound_to_binary_op(node->data.assignment.assign_op)));
@@ -421,8 +418,6 @@ static void gen_assignment_index_expr(Codegen *codegen, ASTNode *node){
 
     fprintf(codegen->file, ")); \n"); // close box_x and list_set
     fprintf(codegen->file, "} \n");   // close temp block
-    
-    return;
 }
 
 // deletes the contents of an existing list and assigns new ones from scratch
@@ -430,8 +425,9 @@ static void gen_assignment_list(Codegen *codegen, ASTNode *node){
     if (node->data.assignment.assign_op != ASSIGN_TOKEN){
         print_error("Codegen (line %d): Cannot do this type of assignment on a list. \n", node->line);
     }
-    
-    fprintf(codegen->file, "%s = ", node->data.assignment.name);
+
+    gen_expression(codegen, node->data.assignment.target);
+    fprintf(codegen->file, " = ");
     gen_expression(codegen, node->data.assignment.value);
     fprintf(codegen->file, "; \n");
 }
@@ -521,29 +517,31 @@ static void gen_repeat(Codegen *codegen, ASTNode *node){
 }
 
 // generates a for loop with the length of the list and assign the item value each time
-// <repeat_on>   ::= "repeat" "on" "(" IDENTIFIER "in" IDENTIFIER ")" "start" ":" <statement>* "end"
+// <repeat_on>   ::= "repeat" "on" "(" IDENTIFIER "in" <postfix> ")" "start" ":" <statement>* "end"
 static void gen_repeat_on(Codegen *codegen, ASTNode *node){
     fprintf(codegen->file, "{ \n"); // open var initialization block
 
     int id_num = codegen->temp_var_count++;
+    Type elem_type = node->type_info->type;
 
-    // init length. static to start of loop
-    fprintf(codegen->file, "int _len%d = list_length(%s); \n", id_num, node->data.repeat_on.list_name);
+    // the list expression is evaluated once into a temp so it isnt re-run every iteration
+    fprintf(codegen->file, "List *_lst%d = ", id_num);
+    gen_expression(codegen, node->data.repeat_on.target);
+    fprintf(codegen->file, "; \n");
+
+    // length is snapshotted at the start of the loop
+    fprintf(codegen->file, "int _len%d = list_length(_lst%d); \n", id_num, id_num);
 
     // for loop
     fprintf(codegen->file, "for (int _i%d = 0; ", id_num);
     fprintf(codegen->file, "_i%d < _len%d; ", id_num, id_num);
     fprintf(codegen->file, "_i%d += 1) {\n", id_num); // step always +1
 
-    // init loop variable
-    gen_type(codegen, node->type_info->type);
-    fprintf(codegen->file, " %s = ", node->data.repeat_on.var_name);
-
-    char index_name[TEMP_NAME_SIZE]; // build the index name "_i%d" to pass as the index to the gen_unbox function
-    snprintf(index_name, sizeof(index_name), "_i%d", id_num);
-
-    gen_unbox_item(codegen, node->type_info->type, node->data.repeat_on.list_name, index_name, NULL);
-    fprintf(codegen->file, ";\n");
+    // loop variable: <elem_type> <name> = unbox_x(list_get(_lst, _i));
+    gen_type(codegen, elem_type);
+    fprintf(codegen->file, " %s = %slist_get(_lst%d, _i%d)%s; \n",
+        node->data.repeat_on.var_name,
+        unbox_prefix(elem_type), id_num, id_num, unbox_suffix(elem_type));
 
     // continue for loop
     gen_body(codegen, node->data.repeat_on.body);
@@ -552,7 +550,6 @@ static void gen_repeat_on(Codegen *codegen, ASTNode *node){
     fprintf(codegen->file, "} \n"); // close var initialization block
 }
 
-// <say>         ::= "say" <expr> "\n"
 // Note: actually emits consecutive printf's for each value
 static void gen_say(Codegen *codegen, ASTNode *node){
     LinkedASTNode *values = node->data.say.values;
@@ -566,9 +563,6 @@ static void gen_say(Codegen *codegen, ASTNode *node){
 
         values = values->next;
     }
-
-    //? Not sure if needed
-    fprintf(codegen->file, "printf(\"\\n\");\n"); // trailing newline for the whole say statement
 }
 
 // <return>      ::= "return" <expr>? "\n"
@@ -671,7 +665,13 @@ static void gen_unary(Codegen *codegen, ASTNode *node){
 
 // generates an expression with an index. like xs[i] 
 static void gen_index(Codegen *codegen, ASTNode *node){
-    gen_unbox_item(codegen, node->type_info->type, node->data.index.list_name, NULL, node->data.index.index_expr);
+    Type elem_type = node->type_info->type;
+
+    fprintf(codegen->file, "%slist_get(", unbox_prefix(elem_type));
+    gen_expression(codegen, node->data.index.target);
+    fprintf(codegen->file, ", ");
+    gen_expression(codegen, node->data.index.index_expr);
+    fprintf(codegen->file, ")%s", unbox_suffix(elem_type));
 }
 
 static void gen_literal(Codegen *codegen, ASTNode *node){
@@ -970,84 +970,9 @@ static void gen_type(Codegen *codegen, Type type){
 
 // writes the correct boxing function
 static void gen_box_item(Codegen *codegen, Type type, ASTNode *value){
-    switch(type){
-        case TYPE_INT:
-            fprintf(codegen->file, "box_int(");
-            break;
-
-        case TYPE_FLOAT:
-            fprintf(codegen->file, "box_float(");
-            break;
-
-        case TYPE_CHAR:
-            fprintf(codegen->file, "box_char(");
-            break;
-
-        case TYPE_BOOL:
-            fprintf(codegen->file, "box_bool(");
-            break;
-
-        case TYPE_STRING:
-        case TYPE_LIST:
-            return gen_expression(codegen, value);
-
-        default:
-            print_error("Codegen: can't box type %d.\n", type);
-    }
-
-    // for scalars, continue the call
+    fprintf(codegen->file, "%s", box_prefix(type));
     gen_expression(codegen, value);
-    fprintf(codegen->file, ")");
-}
-
-// writes the correct unboxing function or casts to a list if typeinfo's a list.
-// both gets the item from the list at the index and unboxes it
-// Note: *index_name is used for gen_repeat_on while *index_expr is used for other. only one of them should exist
-static void gen_unbox_item(Codegen *codegen, Type type, const char *list_name, const char *index_name, ASTNode *index_expr){
-    switch(type){ // call correct function based on type
-        case TYPE_INT:    
-            fprintf(codegen->file, "unbox_int(");
-            break;
-
-        case TYPE_FLOAT:  
-            fprintf(codegen->file, "unbox_float(");
-            break;
-
-        case TYPE_CHAR:   
-            fprintf(codegen->file, "unbox_char(");
-            break;
-
-        case TYPE_BOOL:   
-            fprintf(codegen->file, "unbox_bool(");
-            break;
-
-        case TYPE_STRING: 
-            fprintf(codegen->file, "(char *)");
-            break;
-            
-        case TYPE_LIST:   
-            fprintf(codegen->file, "(List *)");
-            break;
-
-        default: 
-            print_error("Codegen: can't unbox type %d.\n", type);
-    }
-
-    fprintf(codegen->file, "list_get(%s, ", list_name);
-
-    if (index_name != NULL){
-        fprintf(codegen->file, "%s", index_name);
-    }
-    else if (index_expr != NULL){
-        gen_expression(codegen, index_expr);
-    }
-
-    fprintf(codegen->file, ")");
-
-    // close the unbox_ paren for scalars (casts have no closing paren)
-    if (type != TYPE_STRING && type != TYPE_LIST){
-        fprintf(codegen->file, ")");
-    }
+    fprintf(codegen->file, "%s", box_suffix(type));
 }
 
 // a switch for operators (which are stored in ast nodes as enums)
@@ -1115,6 +1040,55 @@ static const char *type_to_specifier(Type type){
             print_error("Codegen: no printf specifier for type %d. \n", type);
             return NULL;
     }
+}
+
+// returns the opening of a boxing call. strings and lists are already pointers so they need none
+static const char *box_prefix(Type type){
+    switch(type){
+        case TYPE_INT:    return "box_int(";
+        case TYPE_FLOAT:  return "box_float(";
+        case TYPE_CHAR:   return "box_char(";
+        case TYPE_BOOL:   return "box_bool(";
+        case TYPE_STRING:
+        case TYPE_LIST:   return "";
+
+        default:
+            print_error("Codegen: can't box type %d. \n", type);
+            return NULL;
+    }
+}
+
+static const char *box_suffix(Type type){
+    if (type == TYPE_STRING || type == TYPE_LIST){
+        return "";
+    }
+
+    return ")";
+}
+
+// returns the opening of a list-element read: an unbox call for scalars, a cast for pointer types
+static const char *unbox_prefix(Type type){
+    switch(type){
+        case TYPE_INT:    return "unbox_int(";
+        case TYPE_FLOAT:  return "unbox_float(";
+        case TYPE_CHAR:   return "unbox_char(";
+        case TYPE_BOOL:   return "unbox_bool(";
+        case TYPE_STRING: return "(char *)";   // already a pointer, just cast
+        case TYPE_LIST:   return "(List *)";   // already a pointer, just cast
+
+        default:
+            print_error("Codegen: can't unbox type %d. \n", type);
+            return NULL;
+    }
+}
+
+// closes the unbox call for scalars. casts have nothing to close
+static const char *unbox_suffix(Type type){
+    if (type == TYPE_STRING || type == TYPE_LIST){
+        return "";
+    }
+
+    return ")";
 }
 
 // get the arg in the passed index. used for builtin functions.

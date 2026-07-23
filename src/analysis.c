@@ -185,7 +185,6 @@ static Symbol *init_symbol_var(char *name, TypeInfo *type, int line){
 
     new_symbol->line = line;
     new_symbol->data.var.type_info = copy_type_info(type);
-    new_symbol->data.var.is_initialized = false; // at creation, symbol does not yet hold a value
 
     return new_symbol;
 } 
@@ -634,7 +633,6 @@ static void analyze_function(Context *context, ASTNode *node){
             params->node->data.function_param.type_info,
             params->node->line
         );
-        new_parameter->data.var.is_initialized = true;
 
         scope_add(context, new_parameter);
 
@@ -684,44 +682,27 @@ static void analyze_create_var(Context *context, ASTNode *node){
     }
 
     Symbol *new_var = init_symbol_var(node->data.create_var.name, node->data.create_var.type_info, node->line);
-
-    if (has_value){
-        new_var->data.var.is_initialized = true;
-    }
         
     scope_add(context, new_var);
 }
 
 // check if variable does not exist in scope
-// if it has an index expression check the variable is a list and the expression is int
 // check the assigned value and the type match, except for if the value is int and the type is float
-// mark it as initialized
 static void analyze_assignment(Context *context, ASTNode *node){
-    Symbol *variable = expect_symbol(context, node->data.assignment.name, SYMBOL_VAR, node->line);
-
-    if (node->data.assignment.index_expr != NULL){
-        if (variable->data.var.type_info->type != TYPE_LIST){ // only lists should have an index expression
-            print_error("Analysis (line %d): Cannot index into non-list variable '%s'. \n", node->line, node->data.assignment.name);
-        }
-
-        TypeInfo *index_type_info = analyze_expression(context, node->data.assignment.index_expr);
-
-        if (index_type_info->type != TYPE_INT){ // index expressions are int only
-            print_error("Analysis (line %d): Index expression must be an integer. \n", node->line);
-        }
+    NodeType target_type = node->data.assignment.target->node_type;
+    if (target_type != IDENTIFIER_NODE && target_type != INDEX_NODE){
+        print_error("Analysis (line %d): Cannot assign to this kind of expression. \n", node->line);
     }
 
+    TypeInfo *target_type_info = analyze_expression(context, node->data.assignment.target); // also checks if it exists in scope
     TypeInfo *value_type_info = analyze_expression(context, node->data.assignment.value);
-    TypeInfo *var_type_info = variable->data.var.type_info;
 
-    if (!types_match(value_type_info, var_type_info)){
+    if (!types_match(value_type_info, target_type_info)){
         // error only if not: value_type = int, and variable_type = float
-        if (value_type_info->type != TYPE_INT || var_type_info->type != TYPE_FLOAT){
-            print_error("Analysis (line %d): Cannot assign value of incompatible type to variable '%s'. \n", node->line, node->data.assignment.name);
+        if (value_type_info->type != TYPE_INT || target_type_info->type != TYPE_FLOAT){
+            print_error("Analysis (line %d): Cannot assign value of incompatible type. \n", node->line);
         }
     }
-
-    variable->data.var.is_initialized = true;
 }
 
 // check condition expression is a boolean
@@ -801,7 +782,6 @@ static void analyze_repeat(Context *context, ASTNode *node){
         loop_var_type_info,
         node->line
     );
-    loop_variable->data.var.is_initialized = true;
     scope_add(context, loop_variable);
 
     free_type_info(loop_var_type_info); // since its getting copied in init_symbol_var we dont need this one
@@ -816,13 +796,13 @@ static void analyze_repeat(Context *context, ASTNode *node){
 // add the loop variable to scope
 // go over the body
 static void analyze_repeat_on(Context *context, ASTNode *node){
-    Symbol *list = expect_symbol(context, node->data.repeat_on.list_name, SYMBOL_VAR, node->line);
-    
-    if (list->data.var.type_info->type != TYPE_LIST){
-        print_error("Analysis (line %d): '%s' is not a list type. \n", node->line, node->data.repeat_on.list_name);
+    TypeInfo *target_type_info = analyze_expression(context, node->data.repeat_on.target);
+
+    if (target_type_info->type != TYPE_LIST){
+        print_error("Analysis (line %d): Can only iterate over a list. \n", node->line);
     }
 
-    node->type_info = copy_type_info(list->data.var.type_info->inner); // keep element for codegen
+    node->type_info = copy_type_info(target_type_info->inner); // keep element type for codegen
 
     bool prev_is_inside_loop = context->is_inside_loop;
     context->is_inside_loop = true;
@@ -830,10 +810,9 @@ static void analyze_repeat_on(Context *context, ASTNode *node){
 
     Symbol *loop_variable = init_symbol_var(
         node->data.repeat_on.var_name,
-        list->data.var.type_info->inner,
+        target_type_info->inner,
         node->line
     );
-    loop_variable->data.var.is_initialized = true;
     scope_add(context, loop_variable);
 
     analyze_body(context, node->data.repeat_on.body);
@@ -879,12 +858,10 @@ static void analyze_say(Context *context, ASTNode *node){
     while (values != NULL){
         ASTNode *value = values->node;
 
-        if (value->node_type != LITERAL_NODE){
-            TypeInfo *value_type_info = analyze_expression(context, value);
+        TypeInfo *value_type_info = analyze_expression(context, value);
 
-            if (value_type_info->type == TYPE_VOID){
-                print_error("Analysis (line %d): SAY cannot print a void expression. \n", node->line);
-            }
+        if (value_type_info->type == TYPE_VOID){
+            print_error("Analysis (line %d): SAY cannot print a void expression. \n", node->line);
         }
 
         values = values->next;
@@ -1033,9 +1010,9 @@ static TypeInfo *analyze_unary(Context *context, ASTNode *node){
 // check if list exists in scope
 // check the index expression is an int
 static TypeInfo *analyze_index(Context *context, ASTNode *node){
-    Symbol *list = expect_symbol(context, node->data.index.list_name, SYMBOL_VAR, node->line);
+    TypeInfo *target_type_info = analyze_expression(context, node->data.index.target); // this also checks if it exists in scope
 
-    if (list->data.var.type_info->type != TYPE_LIST){
+    if (target_type_info->type != TYPE_LIST){
         print_error("Analysis (line %d): Can only index on a list variable. \n", node->line);
     }
 
@@ -1044,7 +1021,7 @@ static TypeInfo *analyze_index(Context *context, ASTNode *node){
         print_error("Analysis (line %d): Index expression should be an integer. \n", node->line);
     }
 
-    node->type_info = copy_type_info(list->data.var.type_info->inner); // hold the type of element the index gets
+    node->type_info = copy_type_info(target_type_info->inner); // hold the type of element the index gets
     return node->type_info;
 }
 

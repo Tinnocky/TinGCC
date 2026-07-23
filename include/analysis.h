@@ -32,7 +32,6 @@ typedef struct {
     union {
         struct {
             TypeInfo *type_info;
-            bool is_initialized; // if it has a value or holds null
         } var;
 
         struct {
