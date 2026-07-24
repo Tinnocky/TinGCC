@@ -125,11 +125,8 @@ static void list_realloc(List *list){
     }
 }
 
-// TODO: need to free the content recursively i think
-void list_free(List *list){
-    free(list->data);
-    free(list);
-}
+//! There is no freeing mechanism and lists get leaked everytime but thats ok
+//! Freeing is a bit to hard for my taste, i dont want to build a garbage collector now
 
 
 /* ----- Box helpers ----- */

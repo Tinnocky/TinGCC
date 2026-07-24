@@ -1,30 +1,34 @@
 #include <stdlib.h>
+#include <string.h>
 #include "../include/lexer.h"
 #include "../include/parser.h"
 #include "../include/analysis.h"
+#include "../include/codegen.h"
 #include "../include/utils.h"
 #include "../include/testing.h"
 
 
 // private function declarations
-static void arguments_check(int argc, char *argv[]);
+/* ----- Testing functions ----- */
 static void run_lexer_test(char *filename);
 static void run_parser_test(char *filename);
 static void run_analysis_test(char *filename);
 
+/* ----- Helpers ----- */
+static char * get_program_name(const char *filename);
+static void arguments_check(int argc, char *argv[]);
 
-// check if arguments passed are correct and if the file passed is a .ting file
-static void arguments_check(int argc, char *argv[]){
-    if (argc != 2){
-        print_error("Wrong usage. Should call: %s <filename>\n", argv[0]);
-    }
+/* ----- Main compiling function ----- */
+static void run_compiler(char *filename);
 
-    char *filename = argv[1];
-    if (!ends_with(filename, ".ting")){
-        print_error("Wrong usage. Should pass file ending with .ting");
-    }
-}
 
+// variable declarations
+#define FILENAME_SUFFIX ".ting"
+#define COMMAND_SIZE 128
+#define COMPILING_COMMAND "gcc " OUTPUT_FILENAME " runtime/ting_runtime.c -Iruntime -o" // without filename
+
+
+/* ----- Testing functions ----- */
 static void run_lexer_test(char *filename){
     Lexer *lexer = init_lexer(filename);
 
@@ -50,7 +54,7 @@ static void run_parser_test(char *filename){
 }
 
 static void run_analysis_test(char *filename){
-Lexer *lexer = init_lexer(filename);
+    Lexer *lexer = init_lexer(filename);
     TokenNode *tokens_head = run_lexer(lexer);
     Parser *parser = init_parser(tokens_head);
     ASTNode *ast_root = run_parser(parser);
@@ -69,6 +73,69 @@ Lexer *lexer = init_lexer(filename);
 }
 
 
+/* ----- Helpers ----- */
+// check if arguments passed are correct and if the file passed is a .ting file
+static void arguments_check(int argc, char *argv[]){
+    if (argc != 2){
+        print_error("Wrong usage. Should call: %s <filename>\n", argv[0]);
+    }
+
+    char *filename = argv[1];
+    if (!ends_with(filename, FILENAME_SUFFIX)){
+        print_error("Wrong usage. Should pass file ending with .ting");
+    }
+}
+
+// returns the filename without the .ting at the end
+static char *get_program_name(const char *filename){
+    int program_length = strlen(filename) - strlen(FILENAME_SUFFIX);
+
+    char *program_name = malloc(program_length + 1); // +1 for null terminator
+    check_nullptr(program_name, "Compiler: malloc for the program name failed. \n");
+
+    for (int i = 0; i < program_length; i++){
+        program_name[i] = filename[i];
+    }
+
+    program_name[program_length] = '\0';
+
+    return program_name;
+}
+
+
+/* ----- Main compiling function ----- */
+static void run_compiler(char *filename){
+    Lexer *lexer = init_lexer(filename);
+    TokenNode *tokens_head = run_lexer(lexer);
+    Parser *parser = init_parser(tokens_head);
+    ASTNode *ast_root = run_parser(parser);
+    Context *context = init_context();
+    run_analysis(context, ast_root);
+    Codegen *codegen = init_codegen();
+    run_codegen(codegen, ast_root); // make output file
+    free_codegen(codegen); // file needs to be closed
+
+    char *program_name = get_program_name(filename);
+    char full_command[COMMAND_SIZE];
+    snprintf(full_command, sizeof(full_command), "%s %s", COMPILING_COMMAND, program_name);
+    printf("DEBUG: %s\n", full_command);   // temporary
+
+    int result = system(full_command); // compiler output file
+
+    if (result != 0){
+        print_error("Compiler: gcc failed to compile the generated code, with return code %d. \n", result);
+    }
+
+    // close compiler
+    free(program_name);
+    free_context(context);
+    free_ast(ast_root);
+    free_parser(parser);
+    free_tokens_list(tokens_head);
+    free_lexer(lexer);
+}
+
+
 int main(int argc, char *argv[]){
     arguments_check(argc, argv);
     
@@ -76,8 +143,11 @@ int main(int argc, char *argv[]){
 
     // which test to run...
     // run_lexer_test(filename);
-    run_parser_test(filename);
+    // run_parser_test(filename);
     // run_analysis_test(filename);
+
+    // or maybe the whole program?
+    run_compiler(filename);
 
     return 0;
 }

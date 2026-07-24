@@ -10,7 +10,6 @@
 static Function *init_function(ASTNode *func_node);
 static LinkedFunction *init_linked_function(Function *function);
 static LinkedASTNode *get_function_params(Codegen *codegen, char *name, int line);
-static void free_function(Function *function);
 static void free_linked_function(LinkedFunction *linked_func);
 
 /* ----- Main functions ----- */
@@ -59,10 +58,10 @@ static void gen_remove_call(Codegen *codegen, ASTNode *node);
 static void gen_body(Codegen *codegen, LinkedASTNode *statements);
 static void gen_function_param(Codegen *codegen, ASTNode *node);
 static void gen_type(Codegen *codegen, Type type);
-static void gen_box_item(Codegen *codegen, Type type, ASTNode *value);
 static const char *op_to_c_string(TokenType operator);
 static TokenType compound_to_binary_op(TokenType op);
 static const char *type_to_specifier(Type type);
+static void gen_box_item(Codegen *codegen, Type type, ASTNode *value);
 static const char *box_prefix(Type type);
 static const char *box_suffix(Type type);
 static const char *unbox_prefix(Type type);
@@ -106,14 +105,17 @@ static LinkedASTNode *get_function_params(Codegen *codegen, char *name, int line
     return NULL;
 }
 
-// TODO: do it later at the end
-static void free_function(Function *function){
-
-}
-
-// TODO: do it later at the end
+// Note: doesnt freee the linked_func->func->params because its borrowed and freed at the AST free
 static void free_linked_function(LinkedFunction *linked_func){
+    while (linked_func != NULL){
+        LinkedFunction *next = linked_func->next;
 
+        free(linked_func->func->name);
+        free(linked_func->func);
+        free(linked_func);
+
+        linked_func = next;
+    }
 }
 
 
@@ -132,9 +134,10 @@ Codegen *init_codegen(void){
     return new_codegen;
 }
 
-// TODO: do it later at the end
 void free_codegen(Codegen *codegen){
-
+    free_linked_function(codegen->functions);
+    fclose(codegen->file);
+    free(codegen);
 }
 
 
@@ -362,9 +365,9 @@ static void gen_assignment(Codegen *codegen, ASTNode *node){
 
 // assigning stuff to an index in a list is complicated
 static void gen_assignment_index_expr(Codegen *codegen, ASTNode *node){
-    ASTNode *target = node->data.assignment.target;
-    ASTNode *list = target->data.index.target;
-    ASTNode *index = target->data.index.index_expr;
+    ASTNode *target = node->data.assignment.target; // whole expression (like xs[i])
+    ASTNode *list = target->data.index.target; // the xs part
+    ASTNode *index = target->data.index.index_expr; // the i part
 
     Type elem_type = target->type_info->type; // what the list holds
 
@@ -418,6 +421,8 @@ static void gen_assignment_index_expr(Codegen *codegen, ASTNode *node){
 
     fprintf(codegen->file, ")); \n"); // close box_x and list_set
     fprintf(codegen->file, "} \n");   // close temp block
+
+    // Note: this wasnt fun
 }
 
 // deletes the contents of an existing list and assigns new ones from scratch
@@ -968,13 +973,6 @@ static void gen_type(Codegen *codegen, Type type){
     }
 }
 
-// writes the correct boxing function
-static void gen_box_item(Codegen *codegen, Type type, ASTNode *value){
-    fprintf(codegen->file, "%s", box_prefix(type));
-    gen_expression(codegen, value);
-    fprintf(codegen->file, "%s", box_suffix(type));
-}
-
 // a switch for operators (which are stored in ast nodes as enums)
 // to be converted to their respective C code
 static const char *op_to_c_string(TokenType operator){
@@ -1042,6 +1040,13 @@ static const char *type_to_specifier(Type type){
     }
 }
 
+// writes the correct boxing function
+static void gen_box_item(Codegen *codegen, Type type, ASTNode *value){
+    fprintf(codegen->file, "%s", box_prefix(type));
+    gen_expression(codegen, value);
+    fprintf(codegen->file, "%s", box_suffix(type));
+}
+
 // returns the opening of a boxing call. strings and lists are already pointers so they need none
 static const char *box_prefix(Type type){
     switch(type){
@@ -1049,8 +1054,10 @@ static const char *box_prefix(Type type){
         case TYPE_FLOAT:  return "box_float(";
         case TYPE_CHAR:   return "box_char(";
         case TYPE_BOOL:   return "box_bool(";
+
         case TYPE_STRING:
-        case TYPE_LIST:   return "";
+        case TYPE_LIST:   
+            return ""; // already a pointer, no need to box
 
         default:
             print_error("Codegen: can't box type %d. \n", type);
@@ -1060,7 +1067,7 @@ static const char *box_prefix(Type type){
 
 static const char *box_suffix(Type type){
     if (type == TYPE_STRING || type == TYPE_LIST){
-        return "";
+        return ""; // already a pointer, no need to box
     }
 
     return ")";
@@ -1085,7 +1092,7 @@ static const char *unbox_prefix(Type type){
 // closes the unbox call for scalars. casts have nothing to close
 static const char *unbox_suffix(Type type){
     if (type == TYPE_STRING || type == TYPE_LIST){
-        return "";
+        return ""; // wasnt boxed to begin with
     }
 
     return ")";

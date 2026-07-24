@@ -13,11 +13,12 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/parser.c \
        $(SRC_DIR)/utils.c \
        $(SRC_DIR)/testing.c \
-       $(SRC_DIR)/analysis.c
+       $(SRC_DIR)/analysis.c \
+       $(SRC_DIR)/codegen.c
 
 # what files build what and where
 OBJS = $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/src/%.o, $(SRCS))
-TARGET = $(BUILD_DIR)/tingcc
+TARGET = tingcc
 
 
 # build
@@ -38,8 +39,11 @@ test_lexer:
 test_parser:
 	@bash testing/parser/test.sh
 
- test_analysis:
+test_analysis:
 	@bash testing/analysis/test.sh
+
+test_codegen:
+	@bash testing/codegen/test.sh
 
 
 # clean
@@ -47,5 +51,5 @@ clean:
 	rm -rf $(BUILD_DIR)
 
 
-.PHONY: all clean test_lexer test_parser test_analysis
+.PHONY: all clean test_lexer test_parser test_analysis test_codegen
 -include $(OBJS:.o=.d)

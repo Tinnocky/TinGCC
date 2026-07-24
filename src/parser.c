@@ -910,26 +910,26 @@ static ASTNode *parse_factor(Parser *parser){
 static ASTNode *parse_postfix(Parser *parser){
     int expr_line = current_line(parser); // get it now because we advance
 
-    ASTNode *current = parse_primary(parser);
+    ASTNode *curr_node = parse_primary(parser);
 
     // do not catch interpolated stuff inside a literal node
-    if (current->node_type == LITERAL_NODE && current->data.literal.type == TYPE_STRING){
-        return current;
+    if (curr_node->node_type == LITERAL_NODE && curr_node->data.literal.type == TYPE_STRING){
+        return curr_node;
     }
 
     // every bracket wraps what we have so far in a new index node
     while (expect_optional(parser, OPEN_BRACKET_TOKEN)){
         ASTNode *new_index = init_ast_node(INDEX_NODE, expr_line);
 
-        new_index->data.index.target = current; // the old thing becomes the target
+        new_index->data.index.target = curr_node; // the old thing becomes the target
         new_index->data.index.index_expr = parse_expression(parser);
 
         expect_must(parser, CLOSE_BRACKET_TOKEN);
 
-        current = new_index; // the new thing becomes what we have
+        curr_node = new_index; // the new thing becomes what we have
     }
 
-    return current;
+    return curr_node;
 }
 
 // <primary>     ::= <call> | IDENTIFIER | <literal> | "(" <bool> ")" | <input>
