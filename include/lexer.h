@@ -43,7 +43,8 @@ typedef enum {
 
     /* BOOLEAN OPERATORS */
     IS_TOKEN,               /* == */
-    NOT_TOKEN,              /* != */
+    NOT_TOKEN,              /* ! */
+    IS_NOT_TOKEN,           /* !=, not checked here, rather in parser */
     MORE_TOKEN,             /* x > */
     LESS_TOKEN,             /* x < */
     THAN_TOKEN,             /* shows up after MORE or LESS */

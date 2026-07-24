@@ -1042,7 +1042,7 @@ static ASTNode *parse_and(Parser *parser){
 }
 
 // <cmp>         ::= <expr> ( <cmp_op> <expr> )?
-// <cmp_op>      ::= "is" | "more" "than" | "less" "than"
+// <cmp_op>      ::= "is" "not"? | "more" "than" | "less" "than"
 static ASTNode *parse_comparison(Parser *parser){
     int cmp_line = current_line(parser); // get before parsing left_val
     ASTNode *left_val = parse_expression(parser);
@@ -1058,6 +1058,9 @@ static ASTNode *parse_comparison(Parser *parser){
     switch(operator_type){
         case IS_TOKEN:
             advance(parser);
+            if (expect_optional(parser, NOT_TOKEN)){
+                operator_type = IS_NOT_TOKEN; // to save is_not_token to expression.op
+            }
             break;
 
         case MORE_TOKEN:
@@ -1066,7 +1069,8 @@ static ASTNode *parse_comparison(Parser *parser){
             expect_must(parser, THAN_TOKEN);
             break;
 
-        default: break;
+        default: 
+            break;
     }
 
     // for More than / less than only store the first word (more/less)

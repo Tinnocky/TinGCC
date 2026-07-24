@@ -996,6 +996,7 @@ static const char *op_to_c_string(TokenType operator){
 
         // comparison
         case IS_TOKEN:        return "==";
+        case IS_NOT_TOKEN:    return "!=";
         case MORE_TOKEN:      return ">";
         case LESS_TOKEN:      return "<";
 

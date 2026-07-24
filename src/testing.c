@@ -50,6 +50,7 @@ static const char *token_type_to_string(TokenType type){
         case BOOL_TOKEN:            return "BOOL_TOKEN";
         case VOID_TOKEN:            return "VOID_TOKEN";
         case IS_TOKEN:              return "IS_TOKEN";
+        case IS_NOT_TOKEN:          return "IS_NOT_TOKEN";
         case NOT_TOKEN:             return "NOT_TOKEN";
         case MORE_TOKEN:            return "MORE_TOKEN";
         case LESS_TOKEN:            return "LESS_TOKEN";

@@ -3,3 +3,6 @@
 tingcc_lexer_test
 testing/lexer/tingcc_lexer_test
 build/
+myprogram*
+output.c
+tingcc

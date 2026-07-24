@@ -86,7 +86,7 @@
 <or>          ::= <and> ( "or" <and> )*
 <and>         ::= <cmp> ( "and" <cmp> )*
 <cmp>         ::= <expr> ( <cmp_op> <expr> )?
-<cmp_op>      ::= "is" | "more" "than" | "less" "than"
+<cmp_op>      ::= "is" "not"? | "more" "than" | "less" "than"
 
 
 (* ---------- Arithmetic expressions ---------- *)

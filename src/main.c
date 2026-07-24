@@ -15,7 +15,8 @@ static void run_parser_test(char *filename);
 static void run_analysis_test(char *filename);
 
 /* ----- Helpers ----- */
-static char * get_program_name(const char *filename);
+static char *get_program_name_with_path(const char *filename);
+static char *get_program_name(const char *filename);
 static void arguments_check(int argc, char *argv[]);
 
 /* ----- Main compiling function ----- */
@@ -87,6 +88,7 @@ static void arguments_check(int argc, char *argv[]){
 }
 
 // returns the filename without the .ting at the end and the the path at the start
+// Note: this is used for testings
 static char *get_program_name_with_path(const char *filename){
     int program_length = strlen(filename) - strlen(FILENAME_SUFFIX);
 
@@ -139,10 +141,9 @@ static void run_compiler(char *filename){
     run_codegen(codegen, ast_root); // make output file
     free_codegen(codegen); // file needs to be closed
 
-    char *program_name = get_program_name_with_path(filename); //* _with_path right now
+    char *program_name = get_program_name(filename);
     char full_command[COMMAND_SIZE];
     snprintf(full_command, sizeof(full_command), "%s %s", COMPILING_COMMAND, program_name);
-    printf("DEBUG: [%s]\n", full_command);
 
     int result = system(full_command); // compiler output file
 
@@ -164,13 +165,7 @@ int main(int argc, char *argv[]){
     arguments_check(argc, argv);
     
     char *filename = argv[1];
-
-    // which test to run...
-    // run_lexer_test(filename);
-    // run_parser_test(filename);
-    // run_analysis_test(filename);
-
-    // or maybe the whole program?
+    
     run_compiler(filename);
 
     return 0;
