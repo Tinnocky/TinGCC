@@ -1,0 +1,9 @@
+void main start:
+    create xs as int list = [1, 2, 3]
+    xs[0] = 10
+    xs[1] += 5
+    xs[2] *= 3
+    say xs[0]
+    say xs[1]
+    say xs[2]
+end

@@ -1,0 +1,7 @@
+void main start:
+    say helper()
+end
+
+int helper start:
+    return 99
+end

@@ -1,6 +1,0 @@
-
-int main start:
-    say "hi"
-
-    return 0
-end

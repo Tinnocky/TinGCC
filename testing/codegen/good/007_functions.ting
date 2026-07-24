@@ -1,0 +1,12 @@
+int double_it with [n as int] start:
+    return n * 2
+end
+
+int add_them with [a as int, b as int] start:
+    return a + b
+end
+
+void main start:
+    say double_it(21)
+    say add_them(3, 4)
+end

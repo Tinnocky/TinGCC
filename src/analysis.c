@@ -928,6 +928,7 @@ static TypeInfo *analyze_identifier(Context *context, ASTNode *node){
 
 // nothing to check, just assign val
 static TypeInfo *analyze_input(Context *context, ASTNode *node){
+    (void)context; // unused but still here for symmetry
     node->type_info = init_type_info(node->data.input.type);
     return node->type_info;
 }
@@ -1026,6 +1027,8 @@ static TypeInfo *analyze_index(Context *context, ASTNode *node){
 }
 
 static TypeInfo *analyze_literal(Context *context, ASTNode *node){
+    (void)context; // unused but still here for symmetry
+
     node->type_info = init_type_info(node->data.literal.type);
     return node->type_info;
 }

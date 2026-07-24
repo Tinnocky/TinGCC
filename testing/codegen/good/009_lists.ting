@@ -1,0 +1,10 @@
+void main start:
+    create xs as int list = [10, 20, 30]
+    say xs[0]
+    say xs[2]
+    say length(xs)
+    add(xs, 40)
+    say length(xs)
+    remove(xs, 0)
+    say xs[0]
+end

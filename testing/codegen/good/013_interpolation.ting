@@ -1,0 +1,5 @@
+void main start:
+    create name as string = "world"
+    create n as int = 5
+    say "hello [name] you have [n] items"
+end

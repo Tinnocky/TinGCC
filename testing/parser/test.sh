@@ -1,5 +1,5 @@
 #!/bin/bash
-BINARY="./build/tingcc"
+BINARY="./tingcc"
 GOOD_DIR="testing/parser/good"
 BAD_DIR="testing/parser/bad"
 PASS=0

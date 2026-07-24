@@ -1,0 +1,7 @@
+void main start:
+    create i as int = 0
+    while (i less than 3) start:
+        say i
+        i += 1
+    end
+end

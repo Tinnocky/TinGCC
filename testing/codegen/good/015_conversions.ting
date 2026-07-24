@@ -1,0 +1,7 @@
+void main start:
+    say to_int(3.9)
+    say to_float(4)
+    say to_int("42")
+    say to_string(7)
+    say to_char(65)
+end

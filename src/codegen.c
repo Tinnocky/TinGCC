@@ -585,10 +585,12 @@ static void gen_return(Codegen *codegen, ASTNode *node){
 }
 
 static void gen_stop(Codegen *codegen, ASTNode *node){
+    (void)node; // unused but still here for symmetry
     fprintf(codegen->file, "break; \n");
 }
 
 static void gen_skip(Codegen *codegen, ASTNode *node){
+    (void)node; // unused but still here for symmetry
     fprintf(codegen->file, "continue; \n");
 }
 

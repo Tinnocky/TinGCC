@@ -1,0 +1,8 @@
+void main start:
+    create names as string list = ["alice", "bob"]
+    say names[0]
+    say names[1]
+    repeat on (n in names) start:
+        say n
+    end
+end

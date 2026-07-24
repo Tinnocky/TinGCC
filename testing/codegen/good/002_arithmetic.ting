@@ -1,0 +1,9 @@
+void main start:
+    create a as int = 10
+    create b as int = 3
+    say a + b
+    say a - b
+    say a * b
+    say a / b
+    say a % b
+end

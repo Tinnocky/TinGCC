@@ -1,0 +1,8 @@
+void main start:
+    create xs as int list = [1, 2, 3, 4]
+    create total as int = 0
+    repeat on (n in xs) start:
+        total += n
+    end
+    say total
+end

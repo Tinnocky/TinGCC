@@ -1,0 +1,11 @@
+void main start:
+    repeat (i, 0 to 10) start:
+        if (i is 3) start:
+            skip
+        end
+        if (i more than 5) start:
+            stop
+        end
+        say i
+    end
+end

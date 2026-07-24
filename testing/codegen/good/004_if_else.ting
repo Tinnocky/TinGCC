@@ -1,0 +1,10 @@
+void main start:
+    create x as int = 7
+    if (x more than 10) start:
+        say "big"
+    else (x more than 5) start:
+        say "medium"
+    else start:
+        say "small"
+    end
+end

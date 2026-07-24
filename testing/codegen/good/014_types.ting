@@ -1,0 +1,12 @@
+void main start:
+    create i as int = 42
+    create f as float = 3.5
+    create c as char = 'x'
+    create s as string = "text"
+    create b as bool = true
+    say i
+    say f
+    say c
+    say s
+    say b
+end

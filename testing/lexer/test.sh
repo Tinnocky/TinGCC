@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BINARY="./build/tingcc"
+BINARY="./tingcc"
 GOOD_DIR="testing/lexer/good"
 BAD_DIR="testing/lexer/bad"
 

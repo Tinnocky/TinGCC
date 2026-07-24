@@ -1,0 +1,8 @@
+void main start:
+    repeat (i, 0 to 3) start:
+        say i
+    end
+    repeat (j, 5 to 0, step -2) start:
+        say j
+    end
+end

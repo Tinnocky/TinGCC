@@ -1,0 +1,12 @@
+int sum_list with [nums as int list] start:
+    create total as int = 0
+    repeat on (n in nums) start:
+        total += n
+    end
+    return total
+end
+
+void main start:
+    create xs as int list = [5, 10, 15]
+    say sum_list(xs)
+end
