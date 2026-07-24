@@ -1,0 +1,6 @@
+void main start:
+    create f as float = 2.5
+    create i as int = 3
+    say f * 2.0
+    say f + i
+end

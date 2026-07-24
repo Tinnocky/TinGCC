@@ -1,0 +1,4 @@
+void main start:
+    create names as string list = ["a", "b"]
+    names[0] += "x"
+end

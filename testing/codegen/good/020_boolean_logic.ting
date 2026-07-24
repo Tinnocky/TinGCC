@@ -1,0 +1,13 @@
+void main start:
+    create a as int = 5
+    create b as int = 10
+    if (a less than b and b more than 3) start:
+        say "both"
+    end
+    if (not (a is b)) start:
+        say "different"
+    end
+    if (a is 5 or b is 99) start:
+        say "either"
+    end
+end

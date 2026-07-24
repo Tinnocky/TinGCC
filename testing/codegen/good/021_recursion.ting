@@ -1,0 +1,10 @@
+int factorial with [n as int] start:
+    if (n less than 2) start:
+        return 1
+    end
+    return n * factorial(n - 1)
+end
+
+void main start:
+    say factorial(5)
+end

@@ -1,0 +1,9 @@
+void announce with [msg as string] start:
+    say msg
+    return
+end
+
+void main start:
+    announce("called")
+    announce("twice")
+end

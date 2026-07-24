@@ -1,0 +1,7 @@
+int double_it with [n as int] start:
+    return n * 2
+end
+
+void main start:
+    say double_it(double_it(3))
+end

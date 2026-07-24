@@ -1,0 +1,8 @@
+int multiply with [n as int, times as int = 3] start:
+    return n * times
+end
+
+void main start:
+    say multiply(2)
+    say multiply(2, 5)
+end
