@@ -6,3 +6,4 @@ build/
 myprogram*
 output.c
 tingcc
+testfile*
