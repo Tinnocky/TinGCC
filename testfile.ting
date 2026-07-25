@@ -1,0 +1,7 @@
+int main start:
+    create lst as int list
+    lst[0] = 5
+    lst[0] += 5
+
+    return 0
+end

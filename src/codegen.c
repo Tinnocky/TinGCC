@@ -672,8 +672,17 @@ static void gen_unary(Codegen *codegen, ASTNode *node){
 
 // generates an expression with an index. like xs[i] 
 static void gen_index(Codegen *codegen, ASTNode *node){
-    Type elem_type = node->type_info->type;
+    // string indexing
+    if (node->data.index.target->type_info->type == TYPE_STRING){
+        gen_expression(codegen, node->data.index.target);
+        fprintf(codegen->file, "[");
+        gen_expression(codegen, node->data.index.index_expr);
+        fprintf(codegen->file, "]");
+        return;
+    }
 
+    // list indexing: unbox_x(list_get(target, index))
+    Type elem_type = node->type_info->type;
     fprintf(codegen->file, "%slist_get(", unbox_prefix(elem_type));
     gen_expression(codegen, node->data.index.target);
     fprintf(codegen->file, ", ");
@@ -834,6 +843,7 @@ static void gen_to_int_prefix(Codegen *codegen, ASTNode *node){
     switch(arg->type_info->type){
         case TYPE_INT:
         case TYPE_FLOAT:
+        case TYPE_CHAR:
             fprintf(codegen->file, "(int)(");   // plain C cast
             break;
 

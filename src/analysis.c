@@ -1013,8 +1013,8 @@ static TypeInfo *analyze_unary(Context *context, ASTNode *node){
 static TypeInfo *analyze_index(Context *context, ASTNode *node){
     TypeInfo *target_type_info = analyze_expression(context, node->data.index.target); // this also checks if it exists in scope
 
-    if (target_type_info->type != TYPE_LIST){
-        print_error("Analysis (line %d): Can only index on a list variable. \n", node->line);
+    if (target_type_info->type != TYPE_LIST && target_type_info->type != TYPE_STRING){
+        print_error("Analysis (line %d): Can only index on a list/string variable. \n", node->line);
     }
 
     TypeInfo *index_type_info = analyze_expression(context, node->data.index.index_expr);
@@ -1022,7 +1022,13 @@ static TypeInfo *analyze_index(Context *context, ASTNode *node){
         print_error("Analysis (line %d): Index expression should be an integer. \n", node->line);
     }
 
-    node->type_info = copy_type_info(target_type_info->inner); // hold the type of element the index gets
+    if (target_type_info->type == TYPE_LIST){
+        node->type_info = copy_type_info(target_type_info->inner);
+    }
+    else if (target_type_info->type == TYPE_STRING){
+        node->type_info = init_type_info(TYPE_CHAR);
+    }
+    
     return node->type_info;
 }
 
@@ -1206,7 +1212,7 @@ static TypeInfo *analyze_to_int_call(Context *context, ASTNode *node){
 
     TypeInfo *arg_type_info = analyze_expression(context, get_arg(args, 0));
 
-    if (!is_type_numeric(arg_type_info->type) && arg_type_info->type != TYPE_STRING){
+    if (!is_type_numeric(arg_type_info->type) && arg_type_info->type != TYPE_STRING && arg_type_info->type != TYPE_CHAR){
         print_error("Analysis (line %d): to_int() argument must be numeric or string. \n", node->line);
     }
 

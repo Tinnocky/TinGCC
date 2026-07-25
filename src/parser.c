@@ -488,7 +488,7 @@ static ASTNode *parse_function_call(Parser *parser){
     LinkedASTNode *args_tail = new_node->data.function_call.args; // tail is head as of start
 
     while(current_type(parser) != CLOSE_PAREN_TOKEN){
-        LinkedASTNode *linked_arg = init_linked_ast(parse_expression(parser));
+        LinkedASTNode *linked_arg = init_linked_ast(parse_bool(parser));
 
         if (new_node->data.function_call.args == NULL){ // for first arg
             new_node->data.function_call.args = linked_arg;
@@ -527,7 +527,7 @@ static ASTNode *parse_create_var(Parser *parser){
 
     // = <expr> (optional)
     if (expect_optional(parser, ASSIGN_TOKEN)){
-            new_node->data.create_var.value = parse_expression(parser);
+            new_node->data.create_var.value = parse_bool(parser);
     }
 
     expect_must_statement_end(parser);
@@ -563,7 +563,7 @@ static ASTNode *parse_assignment(Parser *parser){
             print_error("Parser (line %d): expected assignment operator. \n", current_line(parser));
     }
 
-    new_node->data.assignment.value = parse_expression(parser);
+    new_node->data.assignment.value = parse_bool(parser);
     expect_must_statement_end(parser);
 
     return new_node;
@@ -696,25 +696,34 @@ static ASTNode *parse_say(Parser *parser){
     LinkedASTNode *values_head = NULL;
     LinkedASTNode *values_tail = NULL;
 
-    // first part: either a string chunk, or a plain expression (say x + 1)
-    ASTNode *first = parse_expression(parser);
-    values_head = init_linked_ast(first);
-    values_tail = values_head;
+    // if the string starts with interpolation ("[i]..."), the lexer emits no
+    // leading chunk, so the first token is already '[' — skip the first-part parse then.
+    if (current_type(parser) != OPEN_BRACKET_TOKEN){
+        ASTNode *first = parse_bool(parser);
+        values_head = init_linked_ast(first);
+        values_tail = values_head;
+    }
 
-    // if the lexer split an interpolated string, we now see [ expr ] "next chunk" pairs
+    // interpolated pairs: [ expr ] followed by an optional "next chunk"
     while (current_type(parser) == OPEN_BRACKET_TOKEN){
         advance(parser); // consume [
 
-        ASTNode *expr = parse_expression(parser);
+        ASTNode *expr = parse_bool(parser);
         LinkedASTNode *linked_expr = init_linked_ast(expr);
-        values_tail->next = linked_expr;
+
+        if (values_head == NULL){ // interpolation was the very first thing
+            values_head = linked_expr;
+        }
+        else {
+            values_tail->next = linked_expr;
+        }
         values_tail = linked_expr;
 
         expect_must(parser, CLOSE_BRACKET_TOKEN);
 
         // the lexer may emit a string chunk after ] if there's content
         if (current_type(parser) == STRING_LITERAL_TOKEN){
-            ASTNode *chunk = parse_expression(parser); // resolves to a LITERAL_NODE
+            ASTNode *chunk = parse_bool(parser);
             LinkedASTNode *linked_chunk = init_linked_ast(chunk);
             values_tail->next = linked_chunk;
             values_tail = linked_chunk;
@@ -738,7 +747,7 @@ static ASTNode *parse_return(Parser *parser){
         return new_node;
     }
 
-    new_node->data.return_statement.value = parse_expression(parser);
+    new_node->data.return_statement.value = parse_bool(parser);
     expect_must_statement_end(parser);
 
     return new_node;
@@ -756,7 +765,7 @@ static ASTNode *parse_function_param(Parser *parser){
 
     // default value (optional)
     if (expect_optional(parser, ASSIGN_TOKEN)){
-        new_node->data.function_param.default_val = parse_expression(parser);
+        new_node->data.function_param.default_val = parse_bool(parser);
     }
 
     return new_node;
@@ -1136,7 +1145,7 @@ static ASTNode *parse_list_literal(Parser *parser){
     LinkedASTNode *expressions_tail = new_node->data.list_literal.values; // tail is head as of start
 
     while(current_type(parser) != CLOSE_BRACKET_TOKEN){
-        LinkedASTNode *linked_expr = init_linked_ast(parse_expression(parser));
+        LinkedASTNode *linked_expr = init_linked_ast(parse_bool(parser));
 
         if (new_node->data.list_literal.values == NULL){ // for first expression
             new_node->data.list_literal.values = linked_expr;
